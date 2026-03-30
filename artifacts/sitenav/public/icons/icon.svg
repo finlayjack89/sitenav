@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="32" fill="#1E2ED9"/>
+  <path d="M96 28C72.8 28 54 46.8 54 70c0 33 42 92 42 92s42-59 42-92c0-23.2-18.8-42-42-42z" fill="#FFFFFF"/>
+  <circle cx="96" cy="70" r="18" fill="#00E38C"/>
+  <text x="96" y="155" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#FFFFFF" letter-spacing="1">SN</text>
+</svg>
