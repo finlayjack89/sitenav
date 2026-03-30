@@ -238,10 +238,6 @@
       const type = site['Type'] || '';
       const item = el('button', {
         className: 'dd-item',
-        onmouseenter: function () {
-          dd.querySelectorAll('.dd-item').forEach(i => i.classList.remove('dd-active'));
-          this.classList.add('dd-active');
-        },
         onclick: () => { openSite(siteNo); dd.style.display = 'none'; $('search-input').value = ''; }
       }, [
         el('span', { className: 'dd-primary' }, [siteNo + (ref ? ' — ' + ref : '')]),
@@ -250,6 +246,9 @@
       dd.appendChild(item);
     }
     dd.style.display = 'block';
+    dd.onmousemove = () => {
+      dd.querySelectorAll('.dd-item.dd-active').forEach(i => i.classList.remove('dd-active'));
+    };
   }
 
   function renderRecent() {
@@ -538,6 +537,8 @@
 
       if (e.key === 'Enter') {
         e.preventDefault();
+        clearTimeout(searchDebounce);
+
         const highlighted = dd.querySelector('.dd-item.dd-active');
         if (highlighted) { highlighted.click(); return; }
 
@@ -554,7 +555,6 @@
           return;
         }
 
-        clearTimeout(searchDebounce);
         performSearch(query);
       }
     });
