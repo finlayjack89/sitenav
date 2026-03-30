@@ -141,12 +141,10 @@
     }
     const orig = btn.textContent;
     btn.textContent = 'Copied!';
-    btn.style.background = '#00E38C';
-    btn.style.color = '#000';
+    btn.classList.add('copied');
     setTimeout(() => {
       btn.textContent = orig;
-      btn.style.background = '';
-      btn.style.color = '';
+      btn.classList.remove('copied');
     }, 1500);
   }
 
@@ -247,6 +245,7 @@
       const type = site['Type'] || '';
       const item = el('button', {
         className: 'dd-item',
+        role: 'option',
         onclick: () => { openSite(siteNo); dd.style.display = 'none'; $('search-input').value = ''; setSitesIncludedVisible(true); }
       }, [
         el('span', { className: 'dd-primary' }, [siteNo + (ref ? ' — ' + ref : '')]),
@@ -306,29 +305,92 @@
     }
   }
 
-  function buildMapBlock(label, coordStr, w3wStr) {
+  function svgIcon(pathD, viewBox) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', viewBox || '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.style.width = '16px';
+    svg.style.height = '16px';
+    svg.style.flexShrink = '0';
+    if (Array.isArray(pathD)) {
+      pathD.forEach(d => {
+        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        p.setAttribute('d', d);
+        svg.appendChild(p);
+      });
+    } else {
+      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('d', pathD);
+      svg.appendChild(p);
+    }
+    return svg;
+  }
+
+  const SVG_PATHS = {
+    camera: 'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z',
+    cameraCircle: 'M12 13m-4 0a4 4 0 1 0 8 0a4 4 0 1 0-8 0',
+    cabinet: 'M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z',
+    cabinetLine: 'M2 12h20',
+    pin: ['M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z', 'M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0'],
+    nav: 'M5 12h14M12 5l7 7-7 7',
+    arrowLeft: 'M19 12H5M12 19l-7-7 7-7',
+    link: ['M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71', 'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'],
+    externalLink: ['M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6', 'M15 3h6v6', 'M10 14L21 3'],
+    starFilled: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+    starOutline: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'
+  };
+
+  function buildMapBlock(label, coordStr, w3wStr, iconType) {
     const coords = parseCoords(coordStr);
     const wrap = el('div', { className: 'map-section' });
-    const heading = el('h3', { className: 'map-heading' }, [label]);
-    wrap.appendChild(heading);
+    const inner = el('div', { className: 'map-section-inner' });
+    const heading = el('h3', { className: 'map-heading' });
+
+    if (iconType === 'camera') {
+      const icon = svgIcon(SVG_PATHS.camera);
+      const icon2 = svgIcon(SVG_PATHS.cameraCircle);
+      icon.appendChild(icon2.querySelector('path'));
+      heading.appendChild(icon);
+    } else if (iconType === 'cabinet') {
+      const icon = svgIcon(SVG_PATHS.cabinet);
+      const line = svgIcon(SVG_PATHS.cabinetLine);
+      icon.appendChild(line.querySelector('path'));
+      heading.appendChild(icon);
+    } else {
+      const icon = svgIcon(SVG_PATHS.pin);
+      heading.appendChild(icon);
+    }
+    heading.appendChild(document.createTextNode(label));
+    inner.appendChild(heading);
 
     if (w3wStr) {
       const w3wRow = el('div', { className: 'w3w-row' });
       const w3wVal = el('span', { className: 'w3w-val' }, ['///' + w3wStr]);
       const copyBtn = el('button', {
         className: 'copy-btn',
+        'aria-label': 'Copy W3W address',
         onclick: function () { copyText('///' + w3wStr, this); }
       }, ['Copy']);
       const w3wLink = el('a', {
         className: 'w3w-link-btn',
         href: `https://what3words.com/${w3wStr}`,
         target: '_blank',
-        rel: 'noopener'
-      }, ['Open W3W ↗']);
+        rel: 'noopener',
+        'aria-label': 'Open in What3Words'
+      }, ['Open W3W']);
+      const extIcon = svgIcon(SVG_PATHS.externalLink);
+      extIcon.style.width = '12px';
+      extIcon.style.height = '12px';
+      w3wLink.appendChild(extIcon);
       w3wRow.appendChild(w3wVal);
       w3wRow.appendChild(copyBtn);
       w3wRow.appendChild(w3wLink);
-      wrap.appendChild(w3wRow);
+      inner.appendChild(w3wRow);
     }
 
     if (coords) {
@@ -340,27 +402,39 @@
           src: mapUrl
         });
         img.onerror = function () {
-          const fallback = el('div', { className: 'map-offline' }, ['📍 Map unavailable offline']);
+          const fallback = el('div', { className: 'map-offline' });
+          const pinIcon = svgIcon(SVG_PATHS.pin);
+          pinIcon.style.width = '24px';
+          pinIcon.style.height = '24px';
+          fallback.appendChild(pinIcon);
+          fallback.appendChild(document.createTextNode('Map unavailable offline'));
           this.parentNode.replaceChild(fallback, this);
         };
-        wrap.appendChild(img);
+        inner.appendChild(img);
       } else {
         const coordDisp = el('div', { className: 'coord-display' }, [coordStr]);
-        wrap.appendChild(coordDisp);
+        inner.appendChild(coordDisp);
       }
 
       const navBtn = el('a', {
         className: 'nav-btn',
         href: buildNavUrl(coords.lat, coords.lon),
         target: '_blank',
-        rel: 'noopener'
-      }, ['▶ Navigate']);
-      wrap.appendChild(navBtn);
+        rel: 'noopener',
+        'aria-label': 'Navigate to ' + label
+      });
+      const navIcon = svgIcon(SVG_PATHS.nav);
+      navIcon.style.width = '18px';
+      navIcon.style.height = '18px';
+      navBtn.appendChild(navIcon);
+      navBtn.appendChild(document.createTextNode('Navigate'));
+      inner.appendChild(navBtn);
     } else if (coordStr) {
       const coordDisp = el('div', { className: 'coord-display' }, [coordStr]);
-      wrap.appendChild(coordDisp);
+      inner.appendChild(coordDisp);
     }
 
+    wrap.appendChild(inner);
     return wrap;
   }
 
@@ -379,18 +453,33 @@
     const cabW3w = site['W3W (Cabinet)'] || '';
 
     const topBar = el('div', { className: 'card-topbar' });
-    const backBtn = el('button', { className: 'back-btn', onclick: closeCard }, ['← Back']);
+    const backBtn = el('button', { className: 'back-btn', 'aria-label': 'Go back', onclick: closeCard });
+    const backIcon = svgIcon(SVG_PATHS.arrowLeft);
+    backBtn.appendChild(backIcon);
+    backBtn.appendChild(document.createTextNode('Back'));
+
     const savedNow = isSaved(siteNo);
+    function makeStarSvg(filled) {
+      const svg = svgIcon(SVG_PATHS.starFilled);
+      svg.style.width = '24px';
+      svg.style.height = '24px';
+      if (filled) { svg.setAttribute('fill', 'currentColor'); }
+      return svg;
+    }
     const starBtn = el('button', {
       className: 'star-btn' + (savedNow ? ' starred' : ''),
       'data-siteno': siteNo,
+      'aria-label': savedNow ? 'Unsave site' : 'Save site',
       onclick: function () {
         const saved = toggleSaved(siteNo);
-        this.textContent = saved ? '★' : '☆';
+        this.innerHTML = '';
+        this.appendChild(makeStarSvg(saved));
         this.classList.toggle('starred', saved);
+        this.setAttribute('aria-label', saved ? 'Unsave site' : 'Save site');
         renderSavedTab();
       }
-    }, [savedNow ? '★' : '☆']);
+    });
+    starBtn.appendChild(makeStarSvg(savedNow));
     topBar.appendChild(backBtn);
     topBar.appendChild(starBtn);
     card.appendChild(topBar);
@@ -413,8 +502,12 @@
         dd = el('dd', { className: 'field-val' });
         const twinBtn = el('button', {
           className: 'twin-site-btn',
+          'aria-label': 'Go to twin site ' + String(value).trim(),
           onclick: () => openSite(String(value).trim())
-        }, ['🔗 ' + String(value).trim()]);
+        });
+        const linkIcon = svgIcon(SVG_PATHS.link);
+        twinBtn.appendChild(linkIcon);
+        twinBtn.appendChild(document.createTextNode(String(value).trim()));
         dd.appendChild(twinBtn);
       } else {
         dd = el('dd', { className: 'field-val' }, [String(value)]);
@@ -428,14 +521,14 @@
 
     if (isDual) {
       if (camCoord || camW3w) {
-        mapArea.appendChild(buildMapBlock('📷 Camera', camCoord, camW3w));
+        mapArea.appendChild(buildMapBlock('Camera', camCoord, camW3w, 'camera'));
       }
       if (cabCoord || cabW3w) {
-        mapArea.appendChild(buildMapBlock('🗄 Cabinet', cabCoord, cabW3w));
+        mapArea.appendChild(buildMapBlock('Cabinet', cabCoord, cabW3w, 'cabinet'));
       }
     } else {
       if (camCoord || camW3w) {
-        mapArea.appendChild(buildMapBlock('📍 Location', camCoord, camW3w));
+        mapArea.appendChild(buildMapBlock('Location', camCoord, camW3w, 'pin'));
       }
     }
 
