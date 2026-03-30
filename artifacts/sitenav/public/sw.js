@@ -1,5 +1,5 @@
-const CACHE_NAME = 'sitenav-v2';
-const API_CACHE = 'sitenav-api-v2';
+const CACHE_NAME = 'sitenav-v3';
+const API_CACHE = 'sitenav-api-v3';
 const BASE = '/sitenav';
 
 const STATIC_ASSETS = [

@@ -153,14 +153,7 @@
   }
 
   function scoreMatch(site, terms) {
-    const haystack = [
-      site['Site No.'] || site['Site No'] || '',
-      site['Site Reference'] || '',
-      site['Address'] || '',
-      site['Borough'] || '',
-      site['Camera Type'] || '',
-      site['Type'] || ''
-    ].join(' ').toLowerCase();
+    const haystack = (site['Site No.'] || site['Site No'] || '').toLowerCase();
 
     let score = 0;
     for (const t of terms) {
