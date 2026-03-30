@@ -118,12 +118,6 @@
     return { lat, lon };
   }
 
-  function buildMapUrl(lat, lon, zoom = 17) {
-    if (!mapsApiKey) return '';
-    const c = `${lat},${lon}`;
-    return `https://maps.googleapis.com/maps/api/staticmap?center=${c}&zoom=${zoom}&size=600x300&scale=2&maptype=roadmap&markers=color:blue%7C${c}&key=${mapsApiKey}`;
-  }
-
   function buildNavUrl(lat, lon) {
     return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
   }
@@ -313,8 +307,15 @@
         className: 'copy-btn',
         onclick: function () { copyText('///' + w3wStr, this); }
       }, ['Copy']);
+      const w3wLink = el('a', {
+        className: 'w3w-link-btn',
+        href: `https://what3words.com/${w3wStr}`,
+        target: '_blank',
+        rel: 'noopener'
+      }, ['Open W3W ↗']);
       w3wRow.appendChild(w3wVal);
       w3wRow.appendChild(copyBtn);
+      w3wRow.appendChild(w3wLink);
       wrap.appendChild(w3wRow);
     }
 
@@ -395,7 +396,17 @@
       if (MAP_COORD_KEYS.has(key)) continue;
       if (!value || String(value).trim() === '') continue;
       const dt = el('dt', { className: 'field-key' }, [key]);
-      const dd = el('dd', { className: 'field-val' }, [String(value)]);
+      let dd;
+      if (key === 'Twin Site') {
+        dd = el('dd', { className: 'field-val' });
+        const twinBtn = el('button', {
+          className: 'twin-site-btn',
+          onclick: () => openSite(String(value).trim())
+        }, ['🔗 ' + String(value).trim()]);
+        dd.appendChild(twinBtn);
+      } else {
+        dd = el('dd', { className: 'field-val' }, [String(value)]);
+      }
       fieldList.appendChild(dt);
       fieldList.appendChild(dd);
     }

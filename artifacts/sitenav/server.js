@@ -99,6 +99,25 @@ function loginPage(error) {
 
 // --- API routes ---
 
+app.get(`${BASE_PATH}/api/map`, async (req, res) => {
+  if (!GOOGLE_MAPS_API_KEY) return res.status(503).end();
+  const { lat, lon, zoom = '17' } = req.query;
+  if (!lat || !lon) return res.status(400).end();
+  const c = `${lat},${lon}`;
+  const mapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(c)}&zoom=${zoom}&size=600x300&scale=2&maptype=roadmap&markers=color:blue%7C${encodeURIComponent(c)}&key=${GOOGLE_MAPS_API_KEY}`;
+  try {
+    const upstream = await fetch(mapUrl);
+    if (!upstream.ok) return res.status(upstream.status).end();
+    res.setHeader('Content-Type', upstream.headers.get('content-type') || 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    const { Readable } = require('stream');
+    Readable.fromWeb(upstream.body).pipe(res);
+  } catch (err) {
+    console.error('Map proxy error:', err.message);
+    res.status(502).end();
+  }
+});
+
 app.get(`${BASE_PATH}/api/sites`, (req, res) => {
   try {
     const data = fs.readFileSync(DB_PATH, 'utf8');
