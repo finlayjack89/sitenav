@@ -224,6 +224,11 @@
     }
   }
 
+  function setSitesIncludedVisible(visible) {
+    const el = $('sites-included');
+    if (el) el.style.display = visible ? 'block' : 'none';
+  }
+
   function renderDropdown(results) {
     const dd = $('search-dropdown');
     dd.innerHTML = '';
@@ -238,7 +243,7 @@
       const type = site['Type'] || '';
       const item = el('button', {
         className: 'dd-item',
-        onclick: () => { openSite(siteNo); dd.style.display = 'none'; $('search-input').value = ''; }
+        onclick: () => { openSite(siteNo); dd.style.display = 'none'; $('search-input').value = ''; setSitesIncludedVisible(true); }
       }, [
         el('span', { className: 'dd-primary' }, [siteNo + (ref ? ' — ' + ref : '')]),
         el('span', { className: 'dd-secondary' }, [addr + (type ? ' · ' + type : '')])
@@ -454,6 +459,7 @@
       $('saved-view').style.display = 'block';
     } else {
       $('search-view').style.display = 'block';
+      setSitesIncludedVisible(true);
     }
     currentSite = null;
   }
@@ -473,8 +479,10 @@
   function performSearch(query) {
     if (!query) {
       renderDropdown([]);
+      setSitesIncludedVisible(true);
       return;
     }
+    setSitesIncludedVisible(false);
     const results = fuzzySearch(query);
     renderDropdown(results);
   }
@@ -497,6 +505,7 @@
 
       if (e.key === 'Escape') {
         dd.style.display = 'none';
+        setSitesIncludedVisible(true);
         searchInput.blur();
         return;
       }
@@ -552,6 +561,7 @@
           openSite(exact['Site No.'] || exact['Site No']);
           dd.style.display = 'none';
           searchInput.value = '';
+          setSitesIncludedVisible(true);
           return;
         }
 
@@ -562,6 +572,7 @@
     document.addEventListener('click', e => {
       if (!e.target.closest('#search-wrap')) {
         $('search-dropdown').style.display = 'none';
+        setSitesIncludedVisible(true);
       }
     });
 

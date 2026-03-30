@@ -105,6 +105,35 @@
     /* Recently searched */
     #recent-section { margin-bottom: 16px; }
     .section-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #888; margin-bottom: 8px; }
+
+    /* Sites Included */
+    #sites-included { margin-bottom: 16px; }
+    #sites-included .sites-heading { font-size: 0.85rem; font-weight: 700; text-decoration: underline; color: #222; margin-bottom: 8px; }
+    .sites-list { list-style: none; padding: 0; margin: 0; }
+    .sites-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 7px 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 0.875rem;
+      color: #333;
+    }
+    .sites-list li:last-child { border-bottom: none; }
+    .sites-list .check {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      margin-top: 1px;
+      color: #00b87a;
+      font-size: 1rem;
+      line-height: 1;
+    }
+    .sites-list .hint {
+      font-size: 0.78rem;
+      color: #666;
+      margin-left: 4px;
+    }
     #recent-items { display: flex; flex-wrap: wrap; gap: 8px; }
     .recent-chip {
       display: flex;
@@ -366,6 +395,19 @@
             spellcheck="false"
           >
           <div id="search-dropdown"></div>
+        </div>
+
+        <div id="sites-included">
+          <p class="sites-heading">Sites Included</p>
+          <ul class="sites-list">
+            <li><span class="check">&#10003;</span><span>Congestion Charge</span></li>
+            <li><span class="check">&#10003;</span><span>LEZ</span></li>
+            <li><span class="check">&#10003;</span><span>ULEZ 2021 <span class="hint">(U Number: Uxxxxx)</span></span></li>
+            <li><span class="check">&#10003;</span><span>ULEZ 2023</span></li>
+            <li><span class="check">&#10003;</span><span>Monitoring</span></li>
+            <li><span class="check">&#10003;</span><span>Average Speed</span></li>
+            <li><span class="check">&#10003;</span><span>Believ <span class="hint">(Drop GB-LCL prefix and search with "Axxxx")</span></span></li>
+          </ul>
         </div>
 
         <div id="recent-section" style="display:none;">
