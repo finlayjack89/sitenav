@@ -18,7 +18,7 @@ if (!fs.existsSync(DB_PATH)) {
   fs.writeFileSync(DB_PATH, '[]', 'utf8');
 }
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -148,7 +148,14 @@ app.get(`${BASE_PATH}/admin/logout`, (req, res) => {
 
 // --- Admin operations ---
 
-app.post(`${BASE_PATH}/admin/upload`, upload.single('csv'), (req, res) => {
+app.post(`${BASE_PATH}/admin/upload`, (req, res, next) => {
+  upload.single('csv')(req, res, err => {
+    if (err) {
+      return res.status(400).json({ success: false, error: `Upload error: ${err.message}` });
+    }
+    next();
+  });
+}, (req, res) => {
   if (!checkAuth(req)) {
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
