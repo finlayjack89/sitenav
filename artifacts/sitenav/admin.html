@@ -48,6 +48,8 @@
     .btn-danger:hover { background: #fff5f5; }
     a { color: #1E2ED9; text-decoration: none; font-size: 0.85rem; }
     a:hover { text-decoration: underline; }
+    .logout-btn { margin-left: auto; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); color: #fff; padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; text-decoration: none; }
+    .logout-btn:hover { background: rgba(255,255,255,0.25); }
   </style>
 </head>
 <body>
@@ -58,6 +60,7 @@
     </svg>
     <h1>SiteNav Admin</h1>
     <span class="admin-badge">ADMIN</span>
+    <a href="/sitenav/admin/logout" class="logout-btn">Sign Out</a>
   </header>
 
   <div class="container">
@@ -176,7 +179,7 @@
     async function clearDB() {
       if (!confirm('Clear the entire database? This cannot be undone.')) return;
       try {
-        await fetch(BASE + '/admin/clear');
+        await fetch(BASE + '/admin/clear', { method: 'POST' });
         document.getElementById('result-box').innerHTML = '<div class="result-box result-success">Database cleared.</div>';
         loadStats();
       } catch (e) {
