@@ -118,6 +118,10 @@
     return { lat, lon };
   }
 
+  function buildMapUrl(lat, lon, zoom = 17) {
+    return `${BASE}/api/map?lat=${lat}&lon=${lon}&zoom=${zoom}`;
+  }
+
   function buildNavUrl(lat, lon) {
     return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
   }
