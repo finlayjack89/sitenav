@@ -427,6 +427,11 @@
     </main>
   </div>
 
-  <script src="/sitenav/app.js" defer></script>
+  <script>
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.addEventListener('controllerchange',()=>location.reload());
+  }
+  </script>
+  <script src="/sitenav/app.js?v=7" defer></script>
 </body>
 </html>

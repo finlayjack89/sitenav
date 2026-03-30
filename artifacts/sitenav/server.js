@@ -97,6 +97,25 @@ function loginPage(error) {
 </html>`;
 }
 
+// --- Cache reset (bypasses SW because path starts with /api/) ---
+app.get(`${BASE_PATH}/api/reset`, (req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Resetting…</title></head><body>
+<p>Clearing caches and updating…</p>
+<script>
+(async () => {
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (const r of regs) await r.unregister();
+  }
+  const keys = await caches.keys();
+  for (const k of keys) await caches.delete(k);
+  window.location.replace('${BASE_PATH}/');
+})();
+</script></body></html>`);
+});
+
 // --- API routes ---
 
 app.get(`${BASE_PATH}/api/map`, async (req, res) => {
