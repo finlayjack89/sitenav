@@ -21,7 +21,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ```text
 artifacts-monorepo/
 ├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
+│   ├── api-server/         # Express API server (TypeScript, Drizzle, Zod)
+│   └── sitenav/            # SiteNav PWA (Vanilla JS, Express 4, flat-file JSON DB)
 ├── lib/                    # Shared libraries
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
@@ -49,6 +50,22 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 - `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
 
 ## Packages
+
+### `artifacts/sitenav` (`@workspace/sitenav`)
+
+SiteNav Web — a standalone, mobile-first offline-capable PWA for Yunex Traffic field site engineers. No TypeScript, no framework, no build step.
+
+- **Server**: `server.js` — Express 4 (CommonJS), runs on `PORT` (22849 in dev), serves static `public/` at `/sitenav/`, API at `/sitenav/api/`, admin at `/sitenav/admin`
+- **Database**: `database.json` — flat-file JSON array, populated via CSV upload at admin
+- **Frontend**: `public/index.html` + `public/app.js` — Vanilla JS with fuzzy search, site card, localStorage (recent/saved), IndexedDB caching
+- **PWA**: `public/sw.js` (CacheFirst static, NetworkFirst API), `public/manifest.json`, `public/icons/icon.svg`
+- **Admin**: `admin.html` — protected by HTTP Basic Auth, password checked against `ADMIN_PASSWORD` env secret
+- **CSV parsing**: strips all empty/null/whitespace values per row, deduplicates by `Site No.`
+- **Maps**: Google Static Maps images via `GOOGLE_MAPS_API_KEY` env secret (served from `/api/config`)
+- **Dual-coordinate**: CC Enforcement and LEZ sites show Camera + Cabinet sections with separate maps, W3W, and Navigate buttons
+- **Spec docs**: `project_rules.md`, `product_spec.md`
+- Run: `pnpm --filter @workspace/sitenav run dev`
+- Secrets required: `ADMIN_PASSWORD`, `GOOGLE_MAPS_API_KEY`
 
 ### `artifacts/api-server` (`@workspace/api-server`)
 
