@@ -129,10 +129,12 @@ For all other site types with coordinates available:
 - [x] `database.json` — Empty array (seeded on first admin upload)
 - [x] `project_rules.md` — Tech rules document
 - [x] `product_spec.md` — This document
-- [ ] `public/index.html` — Main PWA shell with Yunex branding
-- [ ] `public/app.js` — All client-side logic (search, card, localStorage, IndexedDB, offline)
-- [ ] `public/sw.js` — Service worker (CacheFirst static, NetworkFirst API)
-- [ ] `public/manifest.json` — PWA manifest
-- [ ] `admin.html` — Admin CSV upload page (served at /admin, not in public/)
-- [ ] `public/icons/icon.svg` — Yunex-branded app icon (192px + 512px)
-- [ ] Secrets set: `ADMIN_PASSWORD`, `GOOGLE_MAPS_API_KEY`
+- [x] `public/index.html` — Main PWA shell with Yunex branding
+- [x] `public/app.js` — All client-side logic (search, card, localStorage, IndexedDB, offline)
+- [x] `public/sw.js` — Service worker (CacheFirst static, NetworkFirst API)
+- [x] `public/manifest.json` — PWA manifest
+- [x] `admin.html` — Admin CSV upload page (served at /admin, not in public/)
+- [x] `public/icons/icon.svg` — Yunex-branded SVG app icon
+- [x] `public/icons/icon-192.png` — 192×192 PNG icon (generated from SVG)
+- [x] `public/icons/icon-512.png` — 512×512 PNG icon (generated from SVG)
+- [x] Secrets set: `ADMIN_PASSWORD`, `GOOGLE_MAPS_API_KEY`
