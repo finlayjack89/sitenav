@@ -238,7 +238,11 @@
       const type = site['Type'] || '';
       const item = el('button', {
         className: 'dd-item',
-        onclick: () => { openSite(siteNo); dd.style.display = 'none'; }
+        onmouseenter: function () {
+          dd.querySelectorAll('.dd-item').forEach(i => i.classList.remove('dd-active'));
+          this.classList.add('dd-active');
+        },
+        onclick: () => { openSite(siteNo); dd.style.display = 'none'; $('search-input').value = ''; }
       }, [
         el('span', { className: 'dd-primary' }, [siteNo + (ref ? ' — ' + ref : '')]),
         el('span', { className: 'dd-secondary' }, [addr + (type ? ' · ' + type : '')])
@@ -489,9 +493,69 @@
     });
 
     searchInput.addEventListener('keydown', e => {
+      const dd = $('search-dropdown');
+      const items = () => Array.from(dd.querySelectorAll('.dd-item'));
+
       if (e.key === 'Escape') {
-        $('search-dropdown').style.display = 'none';
+        dd.style.display = 'none';
         searchInput.blur();
+        return;
+      }
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const list = items();
+        if (!list.length) return;
+        const cur = dd.querySelector('.dd-item.dd-active');
+        if (!cur) {
+          list[0].classList.add('dd-active');
+          list[0].scrollIntoView({ block: 'nearest' });
+        } else {
+          const idx = list.indexOf(cur);
+          cur.classList.remove('dd-active');
+          const next = list[Math.min(idx + 1, list.length - 1)];
+          next.classList.add('dd-active');
+          next.scrollIntoView({ block: 'nearest' });
+        }
+        return;
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const list = items();
+        const cur = dd.querySelector('.dd-item.dd-active');
+        if (!cur) return;
+        const idx = list.indexOf(cur);
+        cur.classList.remove('dd-active');
+        if (idx > 0) {
+          list[idx - 1].classList.add('dd-active');
+          list[idx - 1].scrollIntoView({ block: 'nearest' });
+        } else {
+          searchInput.focus();
+        }
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const highlighted = dd.querySelector('.dd-item.dd-active');
+        if (highlighted) { highlighted.click(); return; }
+
+        const query = searchInput.value.trim();
+        if (!query) return;
+
+        const exact = allSites.find(s =>
+          (s['Site No.'] || s['Site No'] || '').toLowerCase() === query.toLowerCase()
+        );
+        if (exact) {
+          openSite(exact['Site No.'] || exact['Site No']);
+          dd.style.display = 'none';
+          searchInput.value = '';
+          return;
+        }
+
+        clearTimeout(searchDebounce);
+        performSearch(query);
       }
     });
 

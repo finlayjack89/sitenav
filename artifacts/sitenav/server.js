@@ -108,10 +108,10 @@ app.get(`${BASE_PATH}/api/map`, async (req, res) => {
   try {
     const upstream = await fetch(mapUrl);
     if (!upstream.ok) return res.status(upstream.status).end();
+    const data = await upstream.arrayBuffer();
     res.setHeader('Content-Type', upstream.headers.get('content-type') || 'image/png');
     res.setHeader('Cache-Control', 'public, max-age=86400');
-    const { Readable } = require('stream');
-    Readable.fromWeb(upstream.body).pipe(res);
+    res.end(Buffer.from(data));
   } catch (err) {
     console.error('Map proxy error:', err.message);
     res.status(502).end();
