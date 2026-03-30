@@ -499,6 +499,31 @@
       }, 250);
     });
 
+    $('search-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const dd = $('search-dropdown');
+      clearTimeout(searchDebounce);
+
+      const highlighted = dd.querySelector('.dd-item.dd-active');
+      if (highlighted) { highlighted.click(); return; }
+
+      const query = searchInput.value.trim();
+      if (!query) return;
+
+      const exact = allSites.find(s =>
+        (s['Site No.'] || s['Site No'] || '').toLowerCase() === query.toLowerCase()
+      );
+      if (exact) {
+        openSite(exact['Site No.'] || exact['Site No']);
+        dd.style.display = 'none';
+        searchInput.value = '';
+        setSitesIncludedVisible(true);
+        return;
+      }
+
+      performSearch(query);
+    });
+
     searchInput.addEventListener('keydown', e => {
       const dd = $('search-dropdown');
       const items = () => Array.from(dd.querySelectorAll('.dd-item'));
@@ -541,31 +566,6 @@
         } else {
           searchInput.focus();
         }
-        return;
-      }
-
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        clearTimeout(searchDebounce);
-
-        const highlighted = dd.querySelector('.dd-item.dd-active');
-        if (highlighted) { highlighted.click(); return; }
-
-        const query = searchInput.value.trim();
-        if (!query) return;
-
-        const exact = allSites.find(s =>
-          (s['Site No.'] || s['Site No'] || '').toLowerCase() === query.toLowerCase()
-        );
-        if (exact) {
-          openSite(exact['Site No.'] || exact['Site No']);
-          dd.style.display = 'none';
-          searchInput.value = '';
-          setSitesIncludedVisible(true);
-          return;
-        }
-
-        performSearch(query);
       }
     });
 
