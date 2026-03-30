@@ -352,7 +352,7 @@
   }
 
   function renderSiteCard(site) {
-    const card = $('site-card');
+    const card = $('card-view');
     card.innerHTML = '';
     currentSite = site;
 
