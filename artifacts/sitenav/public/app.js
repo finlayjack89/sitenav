@@ -149,15 +149,23 @@
   }
 
   function scoreMatch(site, terms) {
-    const haystack = (site['Site No.'] || site['Site No'] || '').toLowerCase();
+    const siteNo  = (site['Site No.'] || site['Site No'] || '').toLowerCase();
+    const ref     = (site['Site Reference'] || '').toLowerCase();
+    const addr    = (site['Address'] || '').toLowerCase();
 
     let score = 0;
     for (const t of terms) {
-      if (!haystack.includes(t)) return -1;
-      const idx = haystack.indexOf(t);
-      if (idx === 0) score += 3;
-      else if (haystack[idx - 1] === ' ') score += 2;
-      else score += 1;
+      if (siteNo.includes(t)) {
+        const idx = siteNo.indexOf(t);
+        score += idx === 0 ? 6 : siteNo[idx - 1] === ' ' ? 5 : 4;
+      } else if (ref.includes(t)) {
+        const idx = ref.indexOf(t);
+        score += idx === 0 ? 3 : ref[idx - 1] === ' ' ? 2 : 1;
+      } else if (addr.includes(t)) {
+        score += 1;
+      } else {
+        return -1;
+      }
     }
     return score;
   }
