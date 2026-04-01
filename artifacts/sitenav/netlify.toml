@@ -11,7 +11,22 @@
   status = 200
 
 [[redirects]]
+  from = "/sitenav/api/*"
+  to = "/.netlify/functions/api"
+  status = 200
+
+[[redirects]]
   from = "/admin/*"
+  to = "/.netlify/functions/api"
+  status = 200
+
+[[redirects]]
+  from = "/sitenav/admin/*"
+  to = "/.netlify/functions/api"
+  status = 200
+
+[[redirects]]
+  from = "/sitenav/admin"
   to = "/.netlify/functions/api"
   status = 200
 
