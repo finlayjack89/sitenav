@@ -105,6 +105,7 @@
       const res = await fetch(BASE + '/api/config');
       const data = await res.json();
       mapsApiKey = data.mapsApiKey || '';
+      window.siteSearchConfig = data.searchConfig || {};
     } catch (_) {}
   }
 
@@ -150,18 +151,21 @@
 
   function scoreMatch(site, terms) {
     const siteNo  = (site['Site No.'] || site['Site No'] || '').toLowerCase();
-    const ref     = (site['Site Reference'] || '').toLowerCase();
-    const addr    = (site['Address'] || '').toLowerCase();
+    
+    let searchableString = '';
+    const config = window.siteSearchConfig || {};
+    for (const [k, v] of Object.entries(site)) {
+        if (config[k] === true && v) {
+            searchableString += ' ' + String(v).toLowerCase();
+        }
+    }
 
     let score = 0;
     for (const t of terms) {
       if (siteNo.includes(t)) {
         const idx = siteNo.indexOf(t);
         score += idx === 0 ? 6 : siteNo[idx - 1] === ' ' ? 5 : 4;
-      } else if (ref.includes(t)) {
-        const idx = ref.indexOf(t);
-        score += idx === 0 ? 3 : ref[idx - 1] === ' ' ? 2 : 1;
-      } else if (addr.includes(t)) {
+      } else if (searchableString.includes(t)) {
         score += 1;
       } else {
         return -1;
@@ -503,6 +507,7 @@
     const fieldList = el('dl', { className: 'field-list' });
     for (const [key, value] of Object.entries(site)) {
       if (MAP_COORD_KEYS.has(key)) continue;
+      if (key === 'SiteDrawingUrl' || key === 'FullDesignPackUrl') continue;
       if (!value || String(value).trim() === '') continue;
       const dt = el('dt', { className: 'field-key' }, [key]);
       let dd;
@@ -541,6 +546,17 @@
     }
 
     if (mapArea.children.length) card.appendChild(mapArea);
+
+    const pdfButtons = el('div', { className: 'pdf-buttons-area' });
+    if (site['SiteDrawingUrl']) {
+        const drawBtn = el('a', { className: 'nav-btn', href: site['SiteDrawingUrl'], target: '_blank', rel: 'noopener', style: 'background: #1E2ED9; color: #fff; margin-bottom: 12px; margin-top: 16px;' }, ['View Site Drawing PDF']);
+        pdfButtons.appendChild(drawBtn);
+    }
+    if (site['FullDesignPackUrl']) {
+        const packBtn = el('a', { className: 'nav-btn', href: site['FullDesignPackUrl'], target: '_blank', rel: 'noopener', style: 'background: #000; color: #fff; margin-bottom: 12px;' }, ['Download Full Design Pack']);
+        pdfButtons.appendChild(packBtn);
+    }
+    if (pdfButtons.children.length > 0) card.appendChild(pdfButtons);
 
     $('search-view').style.display = 'none';
     $('saved-view').style.display = 'none';

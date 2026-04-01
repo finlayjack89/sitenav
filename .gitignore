@@ -47,3 +47,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Ignore large PDFs added by mistake
+public/pdfs/

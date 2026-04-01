@@ -11,14 +11,31 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
 
 const DB_PATH = path.join(__dirname, 'database.json');
+const CONFIG_PATH = path.join(__dirname, 'search_config.json');
 const COOKIE_NAME = 'sitenav_admin';
 const COOKIE_MAX_AGE = 60 * 60 * 24; // 24 hours
 
 if (!fs.existsSync(DB_PATH)) {
   fs.writeFileSync(DB_PATH, '[]', 'utf8');
 }
+if (!fs.existsSync(CONFIG_PATH)) {
+  fs.writeFileSync(CONFIG_PATH, '{}', 'utf8');
+}
+const pdfDir = path.join(__dirname, 'public', 'pdfs', 'ulez');
+if (!fs.existsSync(pdfDir)) {
+  fs.mkdirSync(pdfDir, { recursive: true });
+}
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
+const pdfStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, 'public', 'pdfs', 'ulez'));
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.originalname);
+  }
+});
+const uploadPdf = multer({ storage: pdfStorage, limits: { fileSize: 200 * 1024 * 1024 } });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -149,15 +166,52 @@ app.get(`${BASE_PATH}/api/sites`, (req, res) => {
 });
 
 app.get(`${BASE_PATH}/api/config`, (req, res) => {
-  res.json({ mapsApiKey: GOOGLE_MAPS_API_KEY });
+  try {
+    const searchConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    res.json({ mapsApiKey: GOOGLE_MAPS_API_KEY, searchConfig });
+  } catch (e) {
+    res.json({ mapsApiKey: GOOGLE_MAPS_API_KEY, searchConfig: {} });
+  }
 });
 
-app.get(`${BASE_PATH}/api/db-stats`, (req, res) => {
+app.post(`${BASE_PATH}/api/config`, express.json(), (req, res) => {
+  if (!checkAuth(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  try {
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(req.body, null, 2), 'utf8');
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get(`${BASE_PATH}/api/database/stats`, (req, res) => {
   try {
     const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-    res.json({ count: Array.isArray(data) ? data.length : 0 });
+    const count = Array.isArray(data) ? data.length : 0;
+    const typeBreakdown = {};
+    if (Array.isArray(data)) {
+      data.forEach(site => {
+        const type = site['Type'] || 'Unknown';
+        typeBreakdown[type] = (typeBreakdown[type] || 0) + 1;
+      });
+    }
+    res.json({ count, types: typeBreakdown });
   } catch (e) {
-    res.json({ count: 0 });
+    res.json({ count: 0, types: {} });
+  }
+});
+
+app.delete(`${BASE_PATH}/api/database/type/:type`, (req, res) => {
+  if (!checkAuth(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  const targetType = req.params.type;
+  try {
+    let data = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+    if (!Array.isArray(data)) throw new Error('DB is not an array');
+    const filtered = data.filter(site => (site['Type'] || 'Unknown') !== targetType);
+    fs.writeFileSync(DB_PATH, JSON.stringify(filtered), 'utf8');
+    res.json({ success: true, count: filtered.length, removed: data.length - filtered.length });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
@@ -186,7 +240,18 @@ app.get(`${BASE_PATH}/admin/logout`, (req, res) => {
 
 // --- Admin operations ---
 
-app.post(`${BASE_PATH}/admin/upload`, (req, res, next) => {
+app.post(`${BASE_PATH}/api/upload-pdfs`, (req, res, next) => {
+  uploadPdf.array('pdfs')(req, res, err => {
+    if (err) return res.status(400).json({ success: false, error: `Upload error: ${err.message}` });
+    next();
+  });
+}, (req, res) => {
+  if (!checkAuth(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  if (!req.files || req.files.length === 0) return res.status(400).json({ success: false, error: 'No files uploaded' });
+  res.json({ success: true, count: req.files.length });
+});
+
+app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
   upload.single('csv')(req, res, err => {
     if (err) {
       return res.status(400).json({ success: false, error: `Upload error: ${err.message}` });
@@ -210,30 +275,73 @@ app.post(`${BASE_PATH}/admin/upload`, (req, res, next) => {
       bom: true
     });
 
-    const cleaned = records.map(row => {
-      const out = {};
+    let searchConfig = {};
+    if (fs.existsSync(CONFIG_PATH)) {
+      try { searchConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); } catch(e){}
+    }
+    const TECHNICAL_FIELDS = new Set(['Latitude', 'Longitude', 'URL', 'W3W', 'Coordinates (Camera', 'Coordinates (Camera)', 'Coordinates (Cabinet)', 'W3W (Camera)', 'W3W (Cabinet)', 'SiteDrawingUrl', 'FullDesignPackUrl']);
+
+    let db = [];
+    if (fs.existsSync(DB_PATH)) {
+      try { db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8')); } catch(e){}
+    }
+    const dbMap = new Map();
+    db.forEach(site => {
+      const key = site['Site No.'] || site['Site No'] || site['site_no'];
+      if (key) dbMap.set(key, site);
+    });
+
+    let newHeaders = new Set();
+
+    records.forEach(row => {
+      const cleaned = {};
       for (const [key, value] of Object.entries(row)) {
         const k = key ? key.trim() : key;
         if (!k) continue;
         if (value === null || value === undefined) continue;
         const v = String(value).trim();
         if (v === '') continue;
-        out[k] = v;
+        cleaned[k] = v;
+        newHeaders.add(k);
       }
-      return out;
-    }).filter(row => Object.keys(row).length > 0);
+      if (Object.keys(cleaned).length === 0) return;
 
-    const seen = new Set();
-    const deduped = cleaned.filter(row => {
-      const key = row['Site No.'] || row['Site No'] || row['site_no'];
-      if (!key) return true;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
+      const projNum = cleaned['Project Number'];
+      if (projNum) {
+        if (fs.existsSync(path.join(__dirname, 'public', 'pdfs', 'ulez', `Site ${projNum}_Drawing-only.pdf`))) {
+            cleaned['SiteDrawingUrl'] = `${BASE_PATH}/pdfs/ulez/Site ${projNum}_Drawing-only.pdf`;
+            newHeaders.add('SiteDrawingUrl');
+        }
+        if (fs.existsSync(path.join(__dirname, 'public', 'pdfs', 'ulez', `Site ${projNum}_Full-Pack.pdf`))) {
+            cleaned['FullDesignPackUrl'] = `${BASE_PATH}/pdfs/ulez/Site ${projNum}_Full-Pack.pdf`;
+            newHeaders.add('FullDesignPackUrl');
+        }
+      }
+
+      const key = cleaned['Site No.'] || cleaned['Site No'] || cleaned['site_no'];
+      if (key) {
+        if (dbMap.has(key)) {
+          Object.assign(dbMap.get(key), cleaned);
+        } else {
+          dbMap.set(key, cleaned);
+          db.push(cleaned);
+        }
+      } else {
+        db.push(cleaned);
+      }
     });
 
-    fs.writeFileSync(DB_PATH, JSON.stringify(deduped), 'utf8');
-    res.json({ success: true, count: deduped.length, rawCount: records.length });
+    let configChanged = false;
+    for (const h of newHeaders) {
+      if (!(h in searchConfig)) {
+        searchConfig[h] = !TECHNICAL_FIELDS.has(h);
+        configChanged = true;
+      }
+    }
+    if (configChanged) fs.writeFileSync(CONFIG_PATH, JSON.stringify(searchConfig, null, 2), 'utf8');
+
+    fs.writeFileSync(DB_PATH, JSON.stringify(db), 'utf8');
+    res.json({ success: true, count: db.length, rawCount: records.length });
   } catch (err) {
     console.error('CSV parse error:', err);
     res.status(500).json({ success: false, error: String(err.message) });
