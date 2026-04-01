@@ -290,7 +290,7 @@ app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
       }
       if (Object.keys(cleaned).length === 0) return;
 
-      const projNum = cleaned['Project Number'];
+      const projNum = cleaned['Project Number'] || cleaned['Project No.'] || cleaned['Project No'] || cleaned['project_number'];
       if (projNum) {
         cleaned['SiteDrawingUrl'] = `${R2_PUBLIC_URL}/Site ${projNum}_Drawing-only.pdf`;
         newHeaders.add('SiteDrawingUrl');
@@ -298,7 +298,7 @@ app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
         newHeaders.add('FullDesignPackUrl');
       }
 
-      const key = cleaned['Site No.'] || cleaned['Site No'] || cleaned['site_no'];
+      const key = cleaned['Site No.'] || cleaned['Site No'] || cleaned['site_no'] || cleaned['Site Number'] || cleaned['site_number'];
       if (!key) return;
 
       const mergedData = existingSitesMap.has(key) ? { ...existingSitesMap.get(key), ...cleaned } : cleaned;
@@ -310,13 +310,22 @@ app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
       });
     });
 
-    if (rowsToUpsert.length > 0) {
-      const chunkSize = 1000;
-      for (let i = 0; i < rowsToUpsert.length; i += chunkSize) {
-        const chunk = rowsToUpsert.slice(i, i + chunkSize);
-        const { error } = await supabase.from('sites').upsert(chunk);
-        if (error) throw error;
-      }
+    if (records.length === 0) {
+      return res.status(400).json({ success: false, error: 'The CSV file appears to be empty or could not be read.' });
+    }
+
+    if (rowsToUpsert.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Could not find a valid "Site No.", "Site No", or "Site Number" column. Found columns: ${Array.from(newHeaders).join(', ')}` 
+      });
+    }
+
+    const chunkSize = 1000;
+    for (let i = 0; i < rowsToUpsert.length; i += chunkSize) {
+      const chunk = rowsToUpsert.slice(i, i + chunkSize);
+      const { error } = await supabase.from('sites').upsert(chunk);
+      if (error) throw error;
     }
 
     let configChanged = false;
