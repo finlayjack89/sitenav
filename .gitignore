@@ -50,3 +50,6 @@ Thumbs.db
 
 # Ignore large PDFs added by mistake
 public/pdfs/
+
+# MCP Configuration and Keys
+mcp_endpoints_and_keys.md

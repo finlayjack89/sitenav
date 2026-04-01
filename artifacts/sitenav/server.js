@@ -1,41 +1,39 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
 const multer = require('multer');
 const { parse } = require('csv-parse/sync');
+const { createClient } = require('@supabase/supabase-js');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 const app = express();
 const PORT = process.env.PORT || 22849;
 const BASE_PATH = (process.env.BASE_PATH || '/sitenav').replace(/\/$/, '');
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
 
-const DB_PATH = path.join(__dirname, 'database.json');
-const CONFIG_PATH = path.join(__dirname, 'search_config.json');
-const COOKIE_NAME = 'sitenav_admin';
-const COOKIE_MAX_AGE = 60 * 60 * 24; // 24 hours
+// Supabase Setup
+const supabaseUrl = process.env.SUPABASE_URL || 'https://hwxrlizvyapisruelisj.supabase.co';
+const supabaseKey = process.env.SUPABASE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-if (!fs.existsSync(DB_PATH)) {
-  fs.writeFileSync(DB_PATH, '[]', 'utf8');
-}
-if (!fs.existsSync(CONFIG_PATH)) {
-  fs.writeFileSync(CONFIG_PATH, '{}', 'utf8');
-}
-const pdfDir = path.join(__dirname, 'public', 'pdfs', 'ulez');
-if (!fs.existsSync(pdfDir)) {
-  fs.mkdirSync(pdfDir, { recursive: true });
-}
+// Cloudflare R2 Setup
+const s3Client = new S3Client({
+  region: 'auto',
+  endpoint: process.env.R2_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY,
+    secretAccessKey: process.env.R2_SECRET_KEY,
+  },
+});
+const R2_BUCKET = process.env.R2_BUCKET || 'ulez-design-pdfs';
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 'https://catalog.cloudflarestorage.com/dd2e6c5a8ecffbf98f4ef8cad874bfbf/ulez-design-pdfs';
+
+const COOKIE_NAME = 'sitenav_admin';
+const COOKIE_MAX_AGE = 60 * 60 * 24;
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
-const pdfStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, 'public', 'pdfs', 'ulez'));
-  },
-  filename: (req, file, cb) => {
-    cb(null, file.originalname);
-  }
-});
-const uploadPdf = multer({ storage: pdfStorage, limits: { fileSize: 200 * 1024 * 1024 } });
+const uploadPdf = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -114,27 +112,7 @@ function loginPage(error) {
 </html>`;
 }
 
-// --- Cache reset (bypasses SW because path starts with /api/) ---
-app.get(`${BASE_PATH}/api/reset`, (req, res) => {
-  res.setHeader('Content-Type', 'text/html');
-  res.setHeader('Cache-Control', 'no-store');
-  res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Resetting…</title></head><body>
-<p>Clearing caches and updating…</p>
-<script>
-(async () => {
-  if ('serviceWorker' in navigator) {
-    const regs = await navigator.serviceWorker.getRegistrations();
-    for (const r of regs) await r.unregister();
-  }
-  const keys = await caches.keys();
-  for (const k of keys) await caches.delete(k);
-  window.location.replace('${BASE_PATH}/');
-})();
-</script></body></html>`);
-});
-
 // --- API routes ---
-
 app.get(`${BASE_PATH}/api/map`, async (req, res) => {
   if (!GOOGLE_MAPS_API_KEY) return res.status(503).end();
   const { lat, lon, zoom = '17' } = req.query;
@@ -154,44 +132,48 @@ app.get(`${BASE_PATH}/api/map`, async (req, res) => {
   }
 });
 
-app.get(`${BASE_PATH}/api/sites`, (req, res) => {
+app.get(`${BASE_PATH}/api/sites`, async (req, res) => {
   try {
-    const data = fs.readFileSync(DB_PATH, 'utf8');
+    const { data, error } = await supabase.from('sites').select('data').neq('site_no', '__CONFIG__');
+    if (error) throw error;
+    const sites = (data || []).map(r => r.data);
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'public, max-age=300');
-    res.send(data);
+    res.json(sites);
   } catch (e) {
+    console.error(e);
     res.json([]);
   }
 });
 
-app.get(`${BASE_PATH}/api/config`, (req, res) => {
+app.get(`${BASE_PATH}/api/config`, async (req, res) => {
   try {
-    const searchConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-    res.json({ mapsApiKey: GOOGLE_MAPS_API_KEY, searchConfig });
+    const { data } = await supabase.from('sites').select('data').eq('site_no', '__CONFIG__').maybeSingle();
+    res.json({ mapsApiKey: GOOGLE_MAPS_API_KEY, searchConfig: (data && data.data) ? data.data : {} });
   } catch (e) {
     res.json({ mapsApiKey: GOOGLE_MAPS_API_KEY, searchConfig: {} });
   }
 });
 
-app.post(`${BASE_PATH}/api/config`, express.json(), (req, res) => {
+app.post(`${BASE_PATH}/api/config`, express.json(), async (req, res) => {
   if (!checkAuth(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
   try {
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(req.body, null, 2), 'utf8');
+    await supabase.from('sites').upsert({ site_no: '__CONFIG__', project_number: null, data: req.body });
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
-app.get(`${BASE_PATH}/api/database/stats`, (req, res) => {
+app.get(`${BASE_PATH}/api/database/stats`, async (req, res) => {
   try {
-    const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-    const count = Array.isArray(data) ? data.length : 0;
+    const { data, error } = await supabase.from('sites').select('data').neq('site_no', '__CONFIG__');
+    if (error) throw error;
+    const count = data ? data.length : 0;
     const typeBreakdown = {};
-    if (Array.isArray(data)) {
-      data.forEach(site => {
-        const type = site['Type'] || 'Unknown';
+    if (data) {
+      data.forEach(row => {
+        const type = row.data['Type'] || 'Unknown';
         typeBreakdown[type] = (typeBreakdown[type] || 0) + 1;
       });
     }
@@ -201,26 +183,28 @@ app.get(`${BASE_PATH}/api/database/stats`, (req, res) => {
   }
 });
 
-app.delete(`${BASE_PATH}/api/database/type/:type`, (req, res) => {
+app.delete(`${BASE_PATH}/api/database/type/:type`, async (req, res) => {
   if (!checkAuth(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
   const targetType = req.params.type;
   try {
-    let data = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-    if (!Array.isArray(data)) throw new Error('DB is not an array');
-    const filtered = data.filter(site => (site['Type'] || 'Unknown') !== targetType);
-    fs.writeFileSync(DB_PATH, JSON.stringify(filtered), 'utf8');
-    res.json({ success: true, count: filtered.length, removed: data.length - filtered.length });
+    const { data: sites } = await supabase.from('sites').select('site_no, data').neq('site_no', '__CONFIG__');
+    const toDelete = (sites || []).filter(s => (s.data['Type'] || 'Unknown') === targetType).map(s => s.site_no);
+    if (toDelete.length > 0) {
+      const chunkSize = 100;
+      for (let i = 0; i < toDelete.length; i += chunkSize) {
+        const chunk = toDelete.slice(i, i + chunkSize);
+        await supabase.from('sites').delete().in('site_no', chunk);
+      }
+    }
+    res.json({ success: true, count: sites ? sites.length - toDelete.length : 0, removed: toDelete.length });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
 // --- Admin auth ---
-
 app.get(`${BASE_PATH}/admin`, (req, res) => {
-  if (!checkAuth(req)) {
-    return res.status(200).send(loginPage(false));
-  }
+  if (!checkAuth(req)) return res.status(200).send(loginPage(false));
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
@@ -239,59 +223,59 @@ app.get(`${BASE_PATH}/admin/logout`, (req, res) => {
 });
 
 // --- Admin operations ---
-
 app.post(`${BASE_PATH}/api/upload-pdfs`, (req, res, next) => {
   uploadPdf.array('pdfs')(req, res, err => {
     if (err) return res.status(400).json({ success: false, error: `Upload error: ${err.message}` });
     next();
   });
-}, (req, res) => {
+}, async (req, res) => {
   if (!checkAuth(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
   if (!req.files || req.files.length === 0) return res.status(400).json({ success: false, error: 'No files uploaded' });
-  res.json({ success: true, count: req.files.length });
+  
+  try {
+    for (const file of req.files) {
+      const command = new PutObjectCommand({
+        Bucket: R2_BUCKET,
+        Key: file.originalname,
+        Body: file.buffer,
+        ContentType: 'application/pdf'
+      });
+      await s3Client.send(command);
+    }
+    res.json({ success: true, count: req.files.length });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
   upload.single('csv')(req, res, err => {
-    if (err) {
-      return res.status(400).json({ success: false, error: `Upload error: ${err.message}` });
-    }
+    if (err) return res.status(400).json({ success: false, error: `Upload error: ${err.message}` });
     next();
   });
-}, (req, res) => {
-  if (!checkAuth(req)) {
-    return res.status(401).json({ success: false, error: 'Unauthorized' });
-  }
-  if (!req.file) {
-    return res.status(400).json({ success: false, error: 'No file uploaded' });
-  }
+}, async (req, res) => {
+  if (!checkAuth(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
+
   try {
     const csvContent = req.file.buffer.toString('utf8');
     const records = parse(csvContent, {
-      columns: true,
-      skip_empty_lines: true,
-      trim: true,
-      relax_column_count: true,
-      bom: true
+      columns: true, skip_empty_lines: true, trim: true, relax_column_count: true, bom: true
     });
 
-    let searchConfig = {};
-    if (fs.existsSync(CONFIG_PATH)) {
-      try { searchConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); } catch(e){}
-    }
+    const { data: configData } = await supabase.from('sites').select('data').eq('site_no', '__CONFIG__').maybeSingle();
+    let searchConfig = (configData && configData.data) ? configData.data : {};
     const TECHNICAL_FIELDS = new Set(['Latitude', 'Longitude', 'URL', 'W3W', 'Coordinates (Camera', 'Coordinates (Camera)', 'Coordinates (Cabinet)', 'W3W (Camera)', 'W3W (Cabinet)', 'SiteDrawingUrl', 'FullDesignPackUrl']);
 
-    let db = [];
-    if (fs.existsSync(DB_PATH)) {
-      try { db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8')); } catch(e){}
+    const { data: existingSitesData } = await supabase.from('sites').select('site_no, data').neq('site_no', '__CONFIG__');
+    const existingSitesMap = new Map();
+    if (existingSitesData) {
+      existingSitesData.forEach(s => existingSitesMap.set(s.site_no, s.data));
     }
-    const dbMap = new Map();
-    db.forEach(site => {
-      const key = site['Site No.'] || site['Site No'] || site['site_no'];
-      if (key) dbMap.set(key, site);
-    });
 
     let newHeaders = new Set();
+    const rowsToUpsert = [];
 
     records.forEach(row => {
       const cleaned = {};
@@ -308,28 +292,32 @@ app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
 
       const projNum = cleaned['Project Number'];
       if (projNum) {
-        if (fs.existsSync(path.join(__dirname, 'public', 'pdfs', 'ulez', `Site ${projNum}_Drawing-only.pdf`))) {
-            cleaned['SiteDrawingUrl'] = `${BASE_PATH}/pdfs/ulez/Site ${projNum}_Drawing-only.pdf`;
-            newHeaders.add('SiteDrawingUrl');
-        }
-        if (fs.existsSync(path.join(__dirname, 'public', 'pdfs', 'ulez', `Site ${projNum}_Full-Pack.pdf`))) {
-            cleaned['FullDesignPackUrl'] = `${BASE_PATH}/pdfs/ulez/Site ${projNum}_Full-Pack.pdf`;
-            newHeaders.add('FullDesignPackUrl');
-        }
+        cleaned['SiteDrawingUrl'] = `${R2_PUBLIC_URL}/Site ${projNum}_Drawing-only.pdf`;
+        newHeaders.add('SiteDrawingUrl');
+        cleaned['FullDesignPackUrl'] = `${R2_PUBLIC_URL}/Site ${projNum}_Full-Pack.pdf`;
+        newHeaders.add('FullDesignPackUrl');
       }
 
       const key = cleaned['Site No.'] || cleaned['Site No'] || cleaned['site_no'];
-      if (key) {
-        if (dbMap.has(key)) {
-          Object.assign(dbMap.get(key), cleaned);
-        } else {
-          dbMap.set(key, cleaned);
-          db.push(cleaned);
-        }
-      } else {
-        db.push(cleaned);
-      }
+      if (!key) return;
+
+      const mergedData = existingSitesMap.has(key) ? { ...existingSitesMap.get(key), ...cleaned } : cleaned;
+
+      rowsToUpsert.push({
+        site_no: key,
+        project_number: projNum || null,
+        data: mergedData
+      });
     });
+
+    if (rowsToUpsert.length > 0) {
+      const chunkSize = 1000;
+      for (let i = 0; i < rowsToUpsert.length; i += chunkSize) {
+        const chunk = rowsToUpsert.slice(i, i + chunkSize);
+        const { error } = await supabase.from('sites').upsert(chunk);
+        if (error) throw error;
+      }
+    }
 
     let configChanged = false;
     for (const h of newHeaders) {
@@ -338,34 +326,48 @@ app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
         configChanged = true;
       }
     }
-    if (configChanged) fs.writeFileSync(CONFIG_PATH, JSON.stringify(searchConfig, null, 2), 'utf8');
+    if (configChanged) {
+      await supabase.from('sites').upsert({ site_no: '__CONFIG__', project_number: null, data: searchConfig });
+    }
 
-    fs.writeFileSync(DB_PATH, JSON.stringify(db), 'utf8');
-    res.json({ success: true, count: db.length, rawCount: records.length });
+    res.json({ success: true, count: rowsToUpsert.length, rawCount: records.length });
   } catch (err) {
-    console.error('CSV parse error:', err);
+    console.error('CSV parse/upload error:', err);
     res.status(500).json({ success: false, error: String(err.message) });
   }
 });
 
-app.post(`${BASE_PATH}/admin/clear`, (req, res) => {
-  if (!checkAuth(req)) {
-    return res.status(401).json({ success: false, error: 'Unauthorized' });
+app.post(`${BASE_PATH}/admin/clear`, async (req, res) => {
+  if (!checkAuth(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  try {
+    const { data: sites } = await supabase.from('sites').select('site_no').neq('site_no', '__CONFIG__');
+    const toDelete = (sites || []).map(s => s.site_no);
+    if (toDelete.length > 0) {
+      const chunkSize = 100;
+      for (let i = 0; i < toDelete.length; i += chunkSize) {
+        const chunk = toDelete.slice(i, i + chunkSize);
+        await supabase.from('sites').delete().in('site_no', chunk);
+      }
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
-  fs.writeFileSync(DB_PATH, '[]', 'utf8');
-  res.json({ success: true });
 });
 
 app.get(`${BASE_PATH}`, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
 app.get('/', (req, res) => {
   res.redirect(BASE_PATH + '/');
 });
 
-app.listen(PORT, () => {
-  console.log(`SiteNav server running on port ${PORT} at ${BASE_PATH}/`);
-  if (!ADMIN_PASSWORD) console.warn('WARNING: ADMIN_PASSWORD not set — admin route is inaccessible');
-  if (!GOOGLE_MAPS_API_KEY) console.warn('WARNING: GOOGLE_MAPS_API_KEY not set — maps will be disabled');
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`SiteNav server running on port ${PORT} at ${BASE_PATH}/`);
+  });
+}
+
+// Export for serverless
+module.exports = app;
