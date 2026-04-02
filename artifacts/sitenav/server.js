@@ -131,11 +131,25 @@ app.get(`${BASE_PATH}/api/map`, async (req, res) => {
   }
 });
 
+async function fetchAllSites(columns = 'data') {
+  const allRows = [];
+  let from = 0;
+  const step = 1000;
+  while (true) {
+    const { data, error } = await supabase.from('sites').select(columns).neq('site_no', '__CONFIG__').range(from, from + step - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allRows.push(...data);
+    if (data.length < step) break;
+    from += step;
+  }
+  return allRows;
+}
+
 app.get(`${BASE_PATH}/api/sites`, async (req, res) => {
   try {
-    const { data, error } = await supabase.from('sites').select('data').neq('site_no', '__CONFIG__');
-    if (error) throw error;
-    const sites = (data || []).map(r => r.data);
+    const data = await fetchAllSites('data');
+    const sites = data.map(r => r.data);
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'public, max-age=300');
     res.json(sites);
@@ -166,8 +180,7 @@ app.post(`${BASE_PATH}/api/config`, express.json(), async (req, res) => {
 
 app.get(`${BASE_PATH}/api/database/stats`, async (req, res) => {
   try {
-    const { data, error } = await supabase.from('sites').select('data').neq('site_no', '__CONFIG__');
-    if (error) throw error;
+    const data = await fetchAllSites('data');
     const count = data ? data.length : 0;
     const typeBreakdown = {};
     if (data) {
@@ -186,7 +199,7 @@ app.delete(`${BASE_PATH}/api/database/type/:type`, async (req, res) => {
   if (!checkAuth(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
   const targetType = req.params.type;
   try {
-    const { data: sites } = await supabase.from('sites').select('site_no, data').neq('site_no', '__CONFIG__');
+    const sites = await fetchAllSites('site_no, data');
     const toDelete = (sites || []).filter(s => (s.data['Type'] || 'Unknown') === targetType).map(s => s.site_no);
     if (toDelete.length > 0) {
       const chunkSize = 100;
@@ -267,7 +280,7 @@ app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
     let searchConfig = (configData && configData.data) ? configData.data : {};
     const TECHNICAL_FIELDS = new Set(['Latitude', 'Longitude', 'URL', 'W3W', 'Coordinates (Camera', 'Coordinates (Camera)', 'Coordinates (Cabinet)', 'W3W (Camera)', 'W3W (Cabinet)', 'SiteDrawingUrl', 'FullDesignPackUrl']);
 
-    const { data: existingSitesData } = await supabase.from('sites').select('site_no, data').neq('site_no', '__CONFIG__');
+    const existingSitesData = await fetchAllSites('site_no, data');
     const existingSitesMap = new Map();
     if (existingSitesData) {
       existingSitesData.forEach(s => existingSitesMap.set(s.site_no, s.data));
@@ -348,7 +361,7 @@ app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
 app.post(`${BASE_PATH}/admin/clear`, async (req, res) => {
   if (!checkAuth(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
   try {
-    const { data: sites } = await supabase.from('sites').select('site_no').neq('site_no', '__CONFIG__');
+    const sites = await fetchAllSites('site_no');
     const toDelete = (sites || []).map(s => s.site_no);
     if (toDelete.length > 0) {
       const chunkSize = 100;

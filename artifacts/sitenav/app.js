@@ -150,7 +150,7 @@
   }
 
   function scoreMatch(site, terms) {
-    const siteNo  = (site['Site No.'] || site['Site No'] || '').toLowerCase();
+    const siteNo  = (site['Site No.'] || site['Site No'] || site['Site Number'] || site['site_number'] || '').toLowerCase();
     
     let searchableString = '';
     const config = window.siteSearchConfig || {};
@@ -191,7 +191,8 @@
   }
 
   function addRecent(site) {
-    let list = getRecent().filter(s => s['Site No.'] !== site['Site No.']);
+    const sNo = site['Site No.'] || site['Site No'] || site['Site Number'] || site['site_number'];
+    let list = getRecent().filter(s => (s['Site No.'] || s['Site No'] || s['Site Number'] || s['site_number']) !== sNo);
     list.unshift(site);
     list = list.slice(0, RECENT_LIMIT);
     localStorage.setItem(RECENT_KEY, JSON.stringify(list));
@@ -251,7 +252,7 @@
       return;
     }
     for (const site of results) {
-      const siteNo = site['Site No.'] || site['Site No'] || '';
+      const siteNo = site['Site No.'] || site['Site No'] || site['Site Number'] || site['site_number'] || '';
       const ref = site['Site Reference'] || '';
       const addr = site['Address'] || '';
       const type = site['Type'] || '';
@@ -280,7 +281,7 @@
     const itemsEl = $('recent-items');
     itemsEl.innerHTML = '';
     for (const site of list) {
-      const siteNo = site['Site No.'] || site['Site No'] || '';
+      const siteNo = site['Site No.'] || site['Site No'] || site['Site Number'] || site['site_number'] || '';
       const ref = site['Site Reference'] || site['Address'] || '';
       const chip = el('button', {
         className: 'recent-chip',
@@ -303,7 +304,7 @@
       return;
     }
     for (const siteNo of savedNos) {
-      const site = allSites.find(s => (s['Site No.'] || s['Site No']) === siteNo);
+      const site = allSites.find(s => (s['Site No.'] || s['Site No'] || s['Site Number'] || s['site_number']) === siteNo);
       const addr = site ? (site['Address'] || site['Site Reference'] || '') : '';
       const type = site ? (site['Type'] || '') : '';
       const item = el('button', {
@@ -455,7 +456,7 @@
     card.innerHTML = '';
     currentSite = site;
 
-    const siteNo = site['Site No.'] || site['Site No'] || '';
+    const siteNo = site['Site No.'] || site['Site No'] || site['Site Number'] || site['site_number'] || '';
     const siteType = site['Type'] || '';
     const isDual = DUAL_TYPES.has(siteType);
 
@@ -564,7 +565,7 @@
   }
 
   function openSite(siteNo) {
-    const site = allSites.find(s => (s['Site No.'] || s['Site No']) === siteNo);
+    const site = allSites.find(s => (s['Site No.'] || s['Site No'] || s['Site Number'] || s['site_number']) === siteNo);
     if (!site) {
       showStatus('Site not found in local database.', 'warn');
       return;
@@ -632,10 +633,10 @@
       if (!query) return;
 
       const exact = allSites.find(s =>
-        (s['Site No.'] || s['Site No'] || '').toLowerCase() === query.toLowerCase()
+        (s['Site No.'] || s['Site No'] || s['Site Number'] || s['site_number'] || '').toLowerCase() === query.toLowerCase()
       );
       if (exact) {
-        openSite(exact['Site No.'] || exact['Site No']);
+        openSite(exact['Site No.'] || exact['Site No'] || exact['Site Number'] || exact['site_number']);
         dd.style.display = 'none';
         searchInput.value = '';
         setSitesIncludedVisible(true);
