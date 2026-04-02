@@ -1,0 +1,387 @@
+// Admin dashboard HTML served inline so it works in Netlify's serverless context
+// (Netlify Functions can't use res.sendFile because __dirname points to the function bundle directory)
+module.exports = function adminPage(basePath) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SiteNav Admin — Yunex Traffic</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #E4EDED; margin: 0; padding: 0; min-height: 100vh; }
+    header { background: #1E2ED9; color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 10px; }
+    header h1 { font-size: 1.1rem; font-weight: 700; margin: 0; }
+    .admin-badge { font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+    .container { max-width: 900px; margin: 32px auto; padding: 0 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+    .card { background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .card h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; color: #1E2ED9; }
+    .card p { font-size: 0.85rem; color: #666; margin-bottom: 16px; min-height: 38px;}
+    .file-input-wrap { border: 2px dashed #E4EDED; border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 16px; cursor: pointer; transition: 0.2s;}
+    .file-input-wrap:hover { border-color: #1E2ED9; background: #f5f5ff; }
+    .file-input-wrap input[type="file"] { display: none; }
+    .file-label { display: block; cursor: pointer; }
+    .file-icon { font-size: 2rem; margin-bottom: 8px; }
+    .file-text { font-size: 0.9rem; color: #555; }
+    .file-name { font-size: 0.85rem; color: #1E2ED9; font-weight: 600; margin-top: 8px; }
+    .btn-primary { width: 100%; padding: 12px; background: #1E2ED9; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.2s;}
+    .btn-primary:hover { background: #1525b0; }
+    .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+    .btn-danger { background: none; border: 1px solid #e53e3e; color: #e53e3e; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: 0.2s;}
+    .btn-danger:hover { background: #e53e3e; color: #fff; }
+    .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+    .list-item:last-child { border-bottom: none; }
+    .dataset-name { font-weight: 600; font-size: 0.9rem;}
+    .dataset-count { font-size: 0.8rem; color: #666; background: #E4EDED; padding: 2px 8px; border-radius: 10px; margin-left: 8px;}
+    .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 300px; overflow-y: auto; margin-bottom: 16px; padding-right: 10px;}
+    .check-label { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;}
+    .check-label input { cursor: pointer; accent-color: #1E2ED9;}
+    .result-box { padding: 10px; border-radius: 6px; margin-top: 12px; font-size: 0.85rem; font-weight: 500; display: none;}
+    .result-success { background: #e8f5e9; border: 1px solid #00E38C; color: #1a5c2e; display: block;}
+    .result-error { background: #ffebee; border: 1px solid #f44336; color: #c62828; display: block;}
+    a { color: #1E2ED9; text-decoration: none; font-size: 0.85rem; }
+    a:hover { text-decoration: underline; }
+    .logout-btn { margin-left: auto; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); color: #fff; padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; text-decoration: none; }
+    .logout-btn:hover { background: rgba(255,255,255,0.25); }
+    .full-width { grid-column: 1 / -1; }
+    progress { display: block; width: 100%; margin-top: 12px; height: 8px; border-radius: 4px; overflow: hidden; }
+    progress::-webkit-progress-bar { background: #E4EDED; border-radius: 4px; }
+    progress::-webkit-progress-value { background: #1E2ED9; border-radius: 4px; }
+    .stat-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat { font-size: 2.5rem; font-weight: 800; color: #1E2ED9; margin: 8px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <svg width="24" height="24" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+      <path d="M96 28C72.8 28 54 46.8 54 70c0 33 42 92 42 92s42-59 42-92c0-23.2-18.8-42-42-42z" fill="#fff"/>
+      <circle cx="96" cy="70" r="18" fill="#00E38C"/>
+    </svg>
+    <h1>SiteNav Admin</h1>
+    <span class="admin-badge">ADMIN</span>
+    <a href="${basePath}/admin/logout" class="logout-btn">Sign Out</a>
+  </header>
+
+  <div class="container">
+    <!-- Panel 1: CSV Uploader -->
+    <div class="card">
+      <h2>CSV Uploader</h2>
+      <p>Upload a CSV file to add or update database records. Empty fields are stripped, new columns are auto-discovered.</p>
+      
+      <div class="file-input-wrap" id="csv-drop-zone">
+        <label class="file-label" for="csv-file">
+          <div class="file-icon">📊</div>
+          <div class="file-text">Tap to select a CSV file, or drag & drop here</div>
+          <div class="file-name" id="csv-file-name">No file selected</div>
+        </label>
+        <input type="file" id="csv-file" accept=".csv,text/csv" onchange="handleFileSelect(this, 'csv-file-name', 'upload-csv-btn')">
+      </div>
+
+      <button class="btn-primary" id="upload-csv-btn" disabled onclick="uploadCSV()">Upload & Import Dataset</button>
+      <progress id="csv-progress" value="0" max="100" style="display:none;"></progress>
+      <div id="csv-result" class="result-box"></div>
+    </div>
+
+    <!-- Panel 2: PDF Uploader -->
+    <div class="card">
+      <h2>PDF Uploader</h2>
+      <p>Upload new site drawings and design packs directly to the static storage. Format: Site [ProjectNumber]_Drawing-only.pdf</p>
+      
+      <div class="file-input-wrap" id="pdf-drop-zone">
+        <label class="file-label" for="pdf-file">
+          <div class="file-icon">📄</div>
+          <div class="file-text">Tap to select multiple PDFs, or drag & drop here</div>
+          <div class="file-name" id="pdf-file-name">No files selected</div>
+        </label>
+        <input type="file" id="pdf-file" accept=".pdf,application/pdf" multiple onchange="handleFileSelect(this, 'pdf-file-name', 'upload-pdf-btn')">
+      </div>
+
+      <button class="btn-primary" id="upload-pdf-btn" disabled onclick="uploadPDFs()">Upload Files to Store</button>
+      <progress id="pdf-progress" value="0" max="100" style="display:none;"></progress>
+      <div id="pdf-result" class="result-box"></div>
+    </div>
+
+    <!-- Panel 3: Active Datasets -->
+    <div class="card">
+      <h2>Active Datasets</h2>
+      <p>Current datasets in the system. Use the delete button to clear out a specific dataset type.</p>
+      
+      <div style="margin-bottom: 12px;">
+        <span class="stat-label">Total Sites:</span> <span id="total-sites" style="font-weight: 700; color: #1E2ED9;">—</span>
+      </div>
+      
+      <div id="datasets-list" style="margin-top: 16px;"></div>
+      <div id="dataset-result" class="result-box"></div>
+      
+      <div style="margin-top:24px; border-top: 1px solid #f0f0f0; padding-top:16px;">
+        <button class="btn-danger" style="width:100%; padding:10px;" onclick="clearDB()">DANGER: Clear Entire Database</button>
+      </div>
+    </div>
+
+    <!-- Panel 4: Search Configuration -->
+    <div class="card">
+      <h2>Search Configuration</h2>
+      <p>Select which columns should be included in the end-user fuzzy search algorithm.</p>
+      
+      <div class="checkbox-grid" id="search-config-grid">
+        <!-- Rendered by JS -->
+      </div>
+
+      <button class="btn-primary" id="save-config-btn" onclick="saveSearchConfig()">Save Preferences</button>
+      <div id="config-result" class="result-box"></div>
+    </div>
+
+    <p class="full-width" style="text-align:center; margin-top:8px;"><a href="${basePath}/">← Back to SiteNav app</a></p>
+  </div>
+
+  <script>
+    const BASE = '${basePath}';
+
+    // File Dropzones
+    function setupDropzone(zoneId, inputId, labelId, btnId) {
+      const dropZone = document.getElementById(zoneId);
+      dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = '#1E2ED9'; });
+      dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = '#E4EDED'; });
+      dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#E4EDED';
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          const dt = new DataTransfer();
+          for(let file of files) dt.items.add(file);
+          document.getElementById(inputId).files = dt.files;
+          handleFileSelect(document.getElementById(inputId), labelId, btnId);
+        }
+      });
+    }
+
+    setupDropzone('csv-drop-zone', 'csv-file', 'csv-file-name', 'upload-csv-btn');
+    setupDropzone('pdf-drop-zone', 'pdf-file', 'pdf-file-name', 'upload-pdf-btn');
+
+    function handleFileSelect(input, labelId, btnId) {
+      const files = input.files;
+      if (files && files.length > 0) {
+        let text = files.length === 1 ? files[0].name : files.length + ' files selected';
+        let totalSize = 0;
+        for (let i = 0; i < files.length; i++) totalSize += files[i].size;
+        document.getElementById(labelId).textContent = text + ' (' + (totalSize / 1024).toFixed(1) + ' KB)';
+        document.getElementById(btnId).disabled = false;
+      } else {
+        document.getElementById(labelId).textContent = 'No file(s) selected';
+        document.getElementById(btnId).disabled = true;
+      }
+    }
+
+    // API Calls - UI Sync
+    async function loadStats() {
+      try {
+        const res = await fetch(BASE + '/api/database/stats');
+        const data = await res.json();
+        document.getElementById('total-sites').textContent = data.count.toLocaleString();
+        
+        const list = document.getElementById('datasets-list');
+        list.innerHTML = '';
+        if (data.types && Object.keys(data.types).length > 0) {
+          for (const [type, count] of Object.entries(data.types)) {
+            const item = document.createElement('div');
+            item.className = 'list-item';
+            item.innerHTML = '<div><span class="dataset-name">' + type + '</span><span class="dataset-count">' + count + ' sites</span></div><button class="btn-danger" onclick="deleteType(\\'' + type + '\\')">Delete</button>';
+            list.appendChild(item);
+          }
+        } else {
+          list.innerHTML = '<span style="color:#888; font-size:0.85rem;">No datasets loaded.</span>';
+        }
+      } catch (e) {
+        document.getElementById('total-sites').textContent = '?';
+      }
+    }
+
+    async function loadConfig() {
+      try {
+        const res = await fetch(BASE + '/api/config');
+        const data = await res.json();
+        const grid = document.getElementById('search-config-grid');
+        grid.innerHTML = '';
+        if (data.searchConfig) {
+          for (const [key, enabled] of Object.entries(data.searchConfig)) {
+            const label = document.createElement('label');
+            label.className = 'check-label';
+            const checked = enabled ? 'checked' : '';
+            label.innerHTML = '<input type="checkbox" name="search_fields" value="' + key + '" ' + checked + '> ' + key;
+            grid.appendChild(label);
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function saveSearchConfig() {
+      const btn = document.getElementById('save-config-btn');
+      const box = document.getElementById('config-result');
+      btn.textContent = 'Saving...';
+      
+      const inputs = document.querySelectorAll('input[name="search_fields"]');
+      const configObj = {};
+      inputs.forEach(function(input) {
+        configObj[input.value] = input.checked;
+      });
+
+      try {
+        const res = await fetch(BASE + '/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(configObj)
+        });
+        const data = await res.json();
+        if (data.success) {
+          box.className = 'result-box result-success';
+          box.innerHTML = 'Preferences saved.';
+        } else {
+          box.className = 'result-box result-error';
+          box.innerHTML = 'Error saving preferences.';
+        }
+      } catch (e) {
+        box.className = 'result-box result-error';
+        box.innerHTML = 'Request failed: ' + e.message;
+      } finally {
+        btn.textContent = 'Save Preferences';
+        setTimeout(function() { box.style.display = 'none'; }, 3000);
+      }
+    }
+
+    async function deleteType(type) {
+      if (!confirm('Are you sure you want to delete all site records matching type: "' + type + '"?')) return;
+      const box = document.getElementById('dataset-result');
+      
+      try {
+        const res = await fetch(BASE + '/api/database/type/' + encodeURIComponent(type), { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          box.className = 'result-box result-success';
+          box.innerHTML = 'Deleted ' + data.removed + ' records.';
+          loadStats();
+        } else {
+          box.className = 'result-box result-error';
+          box.innerHTML = 'Delete failed: ' + (data.error || 'Unknown error');
+        }
+      } catch (e) {
+        box.className = 'result-box result-error';
+        box.innerHTML = 'Request failed: ' + e.message;
+      }
+      setTimeout(function() { box.style.display = 'none'; }, 3000);
+    }
+
+    async function clearDB() {
+      if (!confirm('Clear the entire database AND configuration? This cannot be undone.')) return;
+      try {
+        await fetch(BASE + '/admin/clear', { method: 'POST' });
+        loadStats();
+        loadConfig();
+      } catch (e) {
+        alert('Clear failed: ' + e.message);
+      }
+    }
+
+    async function uploadCSV() {
+      const fileInput = document.getElementById('csv-file');
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const btn = document.getElementById('upload-csv-btn');
+      const progress = document.getElementById('csv-progress');
+      const resultBox = document.getElementById('csv-result');
+
+      btn.disabled = true;
+      btn.textContent = 'Uploading…';
+      progress.style.display = 'block';
+      progress.value = 30;
+      resultBox.style.display = 'none';
+
+      const formData = new FormData();
+      formData.append('csv', file);
+
+      try {
+        progress.value = 60;
+        const res = await fetch(BASE + '/api/upload-csv', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        progress.value = 100;
+
+        if (data.success) {
+          resultBox.className = 'result-box result-success';
+          resultBox.innerHTML = '✅ Successfully processed <strong>' + data.rawCount.toLocaleString() + '</strong> rows (Total sites in DB: ' + data.count.toLocaleString() + ').';
+          loadStats();
+          loadConfig();
+        } else {
+          resultBox.className = 'result-box result-error';
+          resultBox.innerHTML = '❌ Error: ' + (data.error || 'Unknown error');
+        }
+      } catch (err) {
+        resultBox.className = 'result-box result-error';
+        resultBox.innerHTML = '❌ Upload failed: ' + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Upload & Import Dataset';
+        setTimeout(function() { progress.style.display = 'none'; progress.value = 0; }, 2000);
+      }
+    }
+
+    async function uploadPDFs() {
+      const fileInput = document.getElementById('pdf-file');
+      const files = fileInput.files;
+      if (!files || files.length === 0) return;
+
+      const btn = document.getElementById('upload-pdf-btn');
+      const progress = document.getElementById('pdf-progress');
+      const resultBox = document.getElementById('pdf-result');
+
+      btn.disabled = true;
+      btn.textContent = 'Uploading…';
+      progress.style.display = 'block';
+      progress.value = 20;
+      resultBox.style.display = 'none';
+
+      const formData = new FormData();
+      for(let i = 0; i < files.length; i++) {
+        formData.append('pdfs', files[i]);
+      }
+
+      try {
+        progress.value = 80;
+        const res = await fetch(BASE + '/api/upload-pdfs', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        progress.value = 100;
+
+        if (data.success) {
+          resultBox.className = 'result-box result-success';
+          resultBox.innerHTML = '✅ Successfully uploaded <strong>' + data.count + '</strong> PDF(s) to storage.';
+        } else {
+          resultBox.className = 'result-box result-error';
+          resultBox.innerHTML = '❌ Error: ' + (data.error || 'Unknown error');
+        }
+      } catch (err) {
+        resultBox.className = 'result-box result-error';
+        resultBox.innerHTML = '❌ Upload failed: ' + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Upload Files to Store';
+        setTimeout(function() { progress.style.display = 'none'; progress.value = 0; }, 2000);
+        fileInput.value = '';
+        handleFileSelect(fileInput, 'pdf-file-name', 'upload-pdf-btn');
+      }
+    }
+
+    // Initial loads
+    window.addEventListener('DOMContentLoaded', function() {
+      loadStats();
+      loadConfig();
+    });
+  </script>
+</body>
+</html>`;
+};
