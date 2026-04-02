@@ -1,10 +1,10 @@
-const CACHE_NAME = 'sitenav-v16';
-const API_CACHE = 'sitenav-api-v16';
+const CACHE_NAME = 'sitenav-v17';
+const API_CACHE = 'sitenav-api-v17';
 const BASE = '/sitenav';
 
 const STATIC_ASSETS = [
   '/',
-  '/app.js?v=15',
+  '/app.js?v=17',
   '/manifest.json',
   '/favicon.svg',
   '/logos/sitenav_logo.svg',
