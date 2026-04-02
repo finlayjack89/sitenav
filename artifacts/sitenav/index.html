@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-title" content="SiteNav">
   <title>SiteNav — Yunex Traffic</title>
   <link rel="manifest" href="/manifest.json">
-  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -114,7 +114,7 @@
       box-shadow: 0 1px 3px var(--shadow-brand-md), 0 4px 12px var(--shadow-brand-lg);
     }
     .header-left { display: flex; align-items: center; gap: 12px; }
-    .header-logo { height: 20px; width: auto; flex-shrink: 0; }
+    .header-logo { height: 28px; width: auto; flex-shrink: 0; }
     .header-divider {
       width: 1px;
       height: 18px;
@@ -711,9 +711,20 @@
       border-top: 1px solid var(--border);
       margin-top: auto;
       background: var(--surface-raised);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .footer-powered {
+      font-size: 0.62rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
     }
     .footer-logo {
-      height: 22px;
+      height: 20px;
       width: auto;
       opacity: 0.45;
       transition: opacity var(--duration-normal) var(--ease-premium);
@@ -731,7 +742,7 @@
   <div id="app">
     <header>
       <div class="header-left">
-        <img src="/icons/yunex-logo-white.svg" alt="Yunex Traffic" class="header-logo">
+        <img src="/logos/sitenav_logo.svg" alt="SiteNav" class="header-logo" style="filter: brightness(0) invert(1);">
         <span class="header-divider" aria-hidden="true"></span>
         <span class="header-title">SiteNav</span>
       </div>
@@ -820,7 +831,8 @@
     </main>
 
     <footer class="app-footer">
-      <img src="/icons/yunex-logo-gradient.svg" alt="Yunex Traffic" class="footer-logo">
+      <span class="footer-powered">Powered by</span>
+      <img src="/logos/yunex_logo_gradient.svg" alt="Yunex Traffic" class="footer-logo">
       <p class="footer-text">© Yunex Traffic</p>
     </footer>
   </div>
@@ -830,6 +842,6 @@
     navigator.serviceWorker.addEventListener('controllerchange',()=>location.reload());
   }
   </script>
-  <script src="/app.js?v=14" defer></script>
+  <script src="/app.js?v=15" defer></script>
 </body>
 </html>

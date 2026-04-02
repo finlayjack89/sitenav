@@ -574,18 +574,23 @@
     $('card-view').style.display = 'block';
   }
 
-  function openSite(siteNo) {
+  function openSite(siteNo, avoidPush = false) {
     const site = allSites.find(s => (s['Site No.'] || s['Site No'] || s['Site Number'] || s['site_number']) === siteNo);
     if (!site) {
       showStatus('Site not found in local database.', 'warn');
       return;
     }
+    
+    if (!avoidPush) {
+      history.pushState(null, '', '/' + encodeURIComponent(siteNo));
+    }
+    
     addRecent(site);
     renderSiteCard(site);
     renderRecent();
   }
 
-  function closeCard() {
+  function closeCard(avoidPush = false) {
     $('card-view').style.display = 'none';
     if (activeTab === 'saved') {
       $('saved-view').style.display = 'block';
@@ -594,11 +599,15 @@
       setSitesIncludedVisible(true);
     }
     currentSite = null;
+    
+    if (!avoidPush) {
+      history.pushState(null, '', activeTab === 'saved' ? '/saved' : '/');
+    }
   }
 
   let activeTab = 'search';
 
-  function showTab(tab) {
+  function showTab(tab, avoidPush = false) {
     activeTab = tab;
     $('tab-search').classList.toggle('tab-active', tab === 'search');
     $('tab-saved').classList.toggle('tab-active', tab === 'saved');
@@ -606,7 +615,27 @@
     $('saved-view').style.display = tab === 'saved' ? 'block' : 'none';
     $('card-view').style.display = 'none';
     if (tab === 'saved') renderSavedTab();
+    
+    if (!avoidPush) {
+      history.pushState(null, '', tab === 'saved' ? '/saved' : '/');
+    }
   }
+
+  function handleRoute() {
+    let path = window.location.pathname.replace(/\/$/, '');
+    if (path === '' || path === '/' || path === '/home') {
+      closeCard(true);
+      showTab('search', true);
+    } else if (path === '/saved') {
+      closeCard(true);
+      showTab('saved', true);
+    } else if (path.length > 1) {
+      const siteNo = decodeURIComponent(path.substring(1));
+      openSite(siteNo, true);
+    }
+  }
+
+  window.addEventListener('popstate', handleRoute);
 
   function performSearch(query) {
     if (!query) {
@@ -725,6 +754,7 @@
 
     await Promise.all([loadConfig(), loadData()]);
     renderRecent();
+    handleRoute();
   }
 
   document.addEventListener('DOMContentLoaded', init);
