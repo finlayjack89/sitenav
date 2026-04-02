@@ -1,10 +1,10 @@
-const CACHE_NAME = 'sitenav-v13';
-const API_CACHE = 'sitenav-api-v13';
+const CACHE_NAME = 'sitenav-v14';
+const API_CACHE = 'sitenav-api-v14';
 const BASE = '/sitenav';
 
 const STATIC_ASSETS = [
   '/',
-  '/app.js?v=13',
+  '/app.js?v=14',
   '/manifest.json',
   '/icons/icon.svg',
 ];

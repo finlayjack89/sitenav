@@ -6,7 +6,7 @@ const { parse } = require('csv-parse/sync');
 const { createClient } = require('@supabase/supabase-js');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-const { GetObjectCommand } = require('@aws-sdk/client-s3');
+const { GetObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
 const adminPage = require('./admin-page');
 
 const app = express();
@@ -254,6 +254,18 @@ app.get(`${BASE_PATH}/api/pdf/:filename`, async (req, res) => {
   } catch (e) {
     console.error('Presigner error:', e);
     res.status(500).send('Error generating secure PDF link');
+  }
+});
+
+app.get(`${BASE_PATH}/api/pdf-check/:filename`, async (req, res) => {
+  try {
+    const filename = req.params.filename;
+    if (!filename || filename.indexOf('/') !== -1) return res.json({ exists: false });
+    const command = new HeadObjectCommand({ Bucket: R2_BUCKET, Key: filename });
+    await s3Client.send(command);
+    res.json({ exists: true });
+  } catch (e) {
+    res.json({ exists: false });
   }
 });
 

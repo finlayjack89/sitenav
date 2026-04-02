@@ -549,15 +549,25 @@
     if (mapArea.children.length) card.appendChild(mapArea);
 
     const pdfButtons = el('div', { className: 'pdf-buttons-area' });
-    if (site['SiteDrawingUrl']) {
-        const drawBtn = el('a', { className: 'nav-btn', href: site['SiteDrawingUrl'], target: '_blank', rel: 'noopener', style: 'background: #1E2ED9; color: #fff; margin-bottom: 12px; margin-top: 16px;' }, ['View Site Drawing PDF']);
-        pdfButtons.appendChild(drawBtn);
+    card.appendChild(pdfButtons);
+
+    function addPdfButton(url, text, bgColor) {
+      const filename = url.split('/').pop();
+      if (!filename) return;
+
+      const btn = el('a', { className: 'nav-btn', href: url, target: '_blank', rel: 'noopener', style: `background: ${bgColor}; color: #fff; margin-bottom: 12px; margin-top: 16px; display: none;` }, [text]);
+      pdfButtons.appendChild(btn);
+
+      fetch(BASE + '/api/pdf-check/' + filename)
+        .then(r => r.json())
+        .then(d => {
+          if (d.exists) btn.style.display = 'block';
+        })
+        .catch(e => console.error('PDF check failed', e));
     }
-    if (site['FullDesignPackUrl']) {
-        const packBtn = el('a', { className: 'nav-btn', href: site['FullDesignPackUrl'], target: '_blank', rel: 'noopener', style: 'background: #000; color: #fff; margin-bottom: 12px;' }, ['Download Full Design Pack']);
-        pdfButtons.appendChild(packBtn);
-    }
-    if (pdfButtons.children.length > 0) card.appendChild(pdfButtons);
+
+    if (site['SiteDrawingUrl']) addPdfButton(site['SiteDrawingUrl'], 'View Site Drawing PDF', '#1E2ED9');
+    if (site['FullDesignPackUrl']) addPdfButton(site['FullDesignPackUrl'], 'View Full Design Pack', '#000');
 
     $('search-view').style.display = 'none';
     $('saved-view').style.display = 'none';
