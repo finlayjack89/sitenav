@@ -11,6 +11,7 @@
   const RECENT_LIMIT = 5;
 
   const MAP_COORD_KEYS = new Set([
+    'W3W', 'w3w', 'Coordinates', 'coordinates',
     'W3W (Camera)', 'Coordinates (Camera', 'Coordinates (Camera)',
     'W3W (Cabinet)', 'Coordinates (Cabinet)'
   ]);
@@ -461,8 +462,8 @@
     const siteType = site['Type'] || '';
     const isDual = DUAL_TYPES.has(siteType);
 
-    const camCoord = site['Coordinates (Camera'] || site['Coordinates (Camera)'] || '';
-    const camW3w = site['W3W (Camera)'] || '';
+    const camCoord = site['Coordinates (Camera'] || site['Coordinates (Camera)'] || site['Coordinates'] || site['coordinates'] || '';
+    const camW3w = site['W3W (Camera)'] || site['W3W'] || site['w3w'] || '';
     const cabCoord = site['Coordinates (Cabinet)'] || '';
     const cabW3w = site['W3W (Cabinet)'] || '';
 
