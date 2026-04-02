@@ -1,12 +1,12 @@
-const CACHE_NAME = 'sitenav-v12';
-const API_CACHE = 'sitenav-api-v12';
+const CACHE_NAME = 'sitenav-v13';
+const API_CACHE = 'sitenav-api-v13';
 const BASE = '/sitenav';
 
 const STATIC_ASSETS = [
-  BASE + '/',
-  BASE + '/app.js',
-  BASE + '/manifest.json',
-  BASE + '/icons/icon.svg',
+  '/',
+  '/app.js?v=13',
+  '/manifest.json',
+  '/icons/icon.svg',
 ];
 
 self.addEventListener('install', event => {

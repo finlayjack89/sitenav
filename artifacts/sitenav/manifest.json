@@ -2,26 +2,26 @@
   "name": "SiteNav",
   "short_name": "SiteNav",
   "description": "Yunex Traffic field site navigation app",
-  "start_url": "/sitenav/",
-  "scope": "/sitenav/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#FFFFFF",
   "theme_color": "#1E2ED9",
   "icons": [
     {
-      "src": "/sitenav/icons/icon.svg",
+      "src": "/icons/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/sitenav/icons/icon-192.png",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/sitenav/icons/icon-512.png",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
