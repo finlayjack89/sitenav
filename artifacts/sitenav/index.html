@@ -98,41 +98,56 @@
       max-width: 700px;
       margin: 0 auto;
       position: relative;
+      padding-top: 68px;
     }
 
-    /* ═══════ HEADER ═══════ */
+    /* ═══════ HEADER (Frosted Glass Pill) ═══════ */
     header {
-      background: var(--brand);
-      color: #FFFFFF;
-      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.72);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      backdrop-filter: blur(20px) saturate(180%);
+      color: var(--text-primary);
+      padding: 10px 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      position: sticky;
-      top: 0;
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 24px);
+      max-width: 676px;
       z-index: 100;
-      box-shadow: 0 1px 3px var(--shadow-brand-md), 0 4px 12px var(--shadow-brand-lg);
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      box-shadow:
+        0 4px 24px rgba(30,46,217,0.10),
+        0 1px 4px rgba(0,0,0,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.5);
+      transition: box-shadow var(--duration-normal) var(--ease-premium),
+                  background var(--duration-normal) var(--ease-premium);
     }
-    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-left { display: flex; align-items: center; gap: 10px; }
     .header-logo { height: 28px; width: auto; flex-shrink: 0; }
     .header-divider {
       width: 1px;
       height: 18px;
-      background: rgba(255,255,255,0.25);
+      background: rgba(30,46,217,0.15);
       flex-shrink: 0;
     }
     .header-title {
       font-size: 1.05rem;
       font-weight: 700;
       letter-spacing: -0.02em;
+      color: var(--text-primary);
     }
     .conn-indicator {
       display: flex;
       align-items: center;
       gap: 6px;
       font-size: 0.72rem;
-      font-weight: 500;
-      opacity: 0.85;
+      font-weight: 600;
+      color: var(--text-secondary);
       letter-spacing: 0.01em;
     }
     #conn-dot {
@@ -724,12 +739,12 @@
       color: var(--text-tertiary);
     }
     .footer-logo {
-      height: 20px;
+      height: 36px;
       width: auto;
-      opacity: 0.45;
+      opacity: 0.7;
       transition: opacity var(--duration-normal) var(--ease-premium);
     }
-    .footer-logo:hover { opacity: 0.7; }
+    .footer-logo:hover { opacity: 0.9; }
     .footer-text {
       font-size: 0.68rem;
       color: var(--text-tertiary);
@@ -742,7 +757,7 @@
   <div id="app">
     <header>
       <div class="header-left">
-        <img src="/logos/sitenav_logo.svg" alt="SiteNav" class="header-logo" style="filter: brightness(0) invert(1);">
+        <img src="/logos/sitenav_logo.svg" alt="SiteNav" class="header-logo">
         <span class="header-divider" aria-hidden="true"></span>
         <span class="header-title">SiteNav</span>
       </div>
@@ -800,7 +815,7 @@
             </li>
             <li>
               <svg class="check-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              <span>ULEZ 2023 <span class="hint">(U Number: Uxxxxx)</span></span>
+              <span>ULEZ 2023 <span class="hint">(U Number: Uxxxxx or G Number: GxxxxA/B/C/D/E)</span></span>
             </li>
             <li>
               <svg class="check-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>

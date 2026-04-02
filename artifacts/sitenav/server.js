@@ -72,10 +72,12 @@ function loginPage(error) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SiteNav Admin — Login</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #E4EDED; min-height: 100vh; display: flex; flex-direction: column; }
     header { background: #1E2ED9; color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 10px; }
+    header .header-logo { height: 24px; width: auto; filter: brightness(0) invert(1); }
     header h1 { font-size: 1.1rem; font-weight: 700; }
     .wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; }
     .card { background: #fff; border-radius: 12px; padding: 36px 28px; width: 100%; max-width: 360px; box-shadow: 0 2px 16px rgba(0,0,0,0.10); }
@@ -91,10 +93,7 @@ function loginPage(error) {
 </head>
 <body>
   <header>
-    <svg width="24" height="24" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
-      <path d="M96 28C72.8 28 54 46.8 54 70c0 33 42 92 42 92s42-59 42-92c0-23.2-18.8-42-42-42z" fill="#fff"/>
-      <circle cx="96" cy="70" r="18" fill="#00E38C"/>
-    </svg>
+    <img src="/logos/sitenav_logo.svg" alt="SiteNav" class="header-logo">
     <h1>SiteNav Admin</h1>
   </header>
   <div class="wrap">

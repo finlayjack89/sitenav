@@ -1,12 +1,14 @@
-const CACHE_NAME = 'sitenav-v15';
-const API_CACHE = 'sitenav-api-v15';
+const CACHE_NAME = 'sitenav-v16';
+const API_CACHE = 'sitenav-api-v16';
 const BASE = '/sitenav';
 
 const STATIC_ASSETS = [
   '/',
   '/app.js?v=15',
   '/manifest.json',
-  '/icons/icon.svg',
+  '/favicon.svg',
+  '/logos/sitenav_logo.svg',
+  '/logos/yunex_logo_gradient.svg',
 ];
 
 self.addEventListener('install', event => {
