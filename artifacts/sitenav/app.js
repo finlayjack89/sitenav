@@ -684,6 +684,15 @@
     $('tab-search').addEventListener('click', () => showTab('search'));
     $('tab-saved').addEventListener('click', () => showTab('saved'));
 
+    const homeLink = $('header-home-link');
+    if (homeLink) {
+      homeLink.addEventListener('click', e => {
+        e.preventDefault();
+        history.pushState(null, '', '/');
+        handleRoute();
+      });
+    }
+
     const searchInput = $('search-input');
     searchInput.addEventListener('input', () => {
       clearTimeout(searchDebounce);

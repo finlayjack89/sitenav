@@ -136,7 +136,8 @@
       transition: box-shadow var(--duration-normal) var(--ease-premium),
                   background var(--duration-normal) var(--ease-premium);
     }
-    .header-left { display: flex; align-items: center; gap: 10px; }
+    .header-left { display: flex; align-items: center; gap: 10px; text-decoration: none; cursor: pointer; transition: opacity var(--duration-normal) var(--ease-premium); }
+    .header-left:hover { opacity: 0.8; }
     .header-logo { height: 28px; width: auto; flex-shrink: 0; }
     .header-divider {
       width: 1px;
@@ -796,11 +797,11 @@
 <body>
   <div id="app">
     <header>
-      <div class="header-left">
+      <a href="/" id="header-home-link" class="header-left" aria-label="Go to Home">
         <img src="/logos/sitenav_logo.svg" alt="SiteNav" class="header-logo">
         <span class="header-divider" aria-hidden="true"></span>
         <span class="header-title">SiteNav</span>
-      </div>
+      </a>
       <div class="conn-indicator" role="status" aria-live="polite">
         <span id="conn-dot" aria-hidden="true"></span>
         <span id="conn-label">Online</span>
