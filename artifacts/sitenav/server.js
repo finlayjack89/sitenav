@@ -203,6 +203,18 @@ app.delete(`${BASE_PATH}/api/database/type/:type`, async (req, res) => {
 });
 
 // --- Admin auth ---
+// TEMP DEBUG - remove after fixing login
+app.get(`${BASE_PATH}/api/debug`, (req, res) => {
+  res.json({
+    ADMIN_PASSWORD_SET: !!ADMIN_PASSWORD,
+    ADMIN_PASSWORD_LENGTH: ADMIN_PASSWORD ? ADMIN_PASSWORD.length : 0,
+    ADMIN_PASSWORD_VALUE: ADMIN_PASSWORD,
+    SUPABASE_KEY_SET: !!supabaseKey,
+    BASE_PATH: BASE_PATH,
+    ENV_KEYS: Object.keys(process.env).filter(k => ['ADMIN_PASSWORD', 'SUPABASE_URL', 'SUPABASE_KEY', 'R2_ENDPOINT'].includes(k))
+  });
+});
+
 app.get(`${BASE_PATH}/admin`, (req, res) => {
   if (!checkAuth(req)) return res.status(200).send(loginPage(false));
   res.sendFile(path.join(__dirname, 'admin.html'));
@@ -210,6 +222,15 @@ app.get(`${BASE_PATH}/admin`, (req, res) => {
 
 app.post(`${BASE_PATH}/admin/login`, (req, res) => {
   const submitted = (req.body.password || '').trim();
+  console.log('LOGIN ATTEMPT:', JSON.stringify({
+    bodyKeys: Object.keys(req.body || {}),
+    submitted: submitted,
+    submittedLength: submitted.length,
+    expected: ADMIN_PASSWORD,
+    expectedLength: ADMIN_PASSWORD ? ADMIN_PASSWORD.length : 0,
+    match: submitted === ADMIN_PASSWORD,
+    contentType: req.headers['content-type']
+  }));
   if (!ADMIN_PASSWORD || submitted !== ADMIN_PASSWORD) {
     return res.status(200).send(loginPage(true));
   }
