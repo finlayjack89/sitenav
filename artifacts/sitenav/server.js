@@ -5,6 +5,8 @@ const multer = require('multer');
 const { parse } = require('csv-parse/sync');
 const { createClient } = require('@supabase/supabase-js');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const { GetObjectCommand } = require('@aws-sdk/client-s3');
 const adminPage = require('./admin-page');
 
 const app = express();
@@ -234,6 +236,27 @@ app.get(`${BASE_PATH}/admin/logout`, (req, res) => {
   res.redirect(BASE_PATH + '/admin');
 });
 
+// --- Secure PDF Streamer ---
+app.get(`${BASE_PATH}/api/pdf/:filename`, async (req, res) => {
+  try {
+    const filename = req.params.filename;
+    if (!filename || filename.indexOf('/') !== -1) {
+      return res.status(400).send('Invalid filename');
+    }
+    const command = new GetObjectCommand({
+      Bucket: R2_BUCKET,
+      Key: filename
+    });
+    // Generate a URL that is valid for 1 hour
+    const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    // Redirect the browser to the pre-signed URL to begin immediate secure download/viewing
+    res.redirect(302, url);
+  } catch (e) {
+    console.error('Presigner error:', e);
+    res.status(500).send('Error generating secure PDF link');
+  }
+});
+
 // --- Admin operations ---
 app.post(`${BASE_PATH}/api/upload-pdfs`, (req, res, next) => {
   uploadPdf.array('pdfs')(req, res, err => {
@@ -304,9 +327,9 @@ app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
 
       const projNum = cleaned['Project Number'] || cleaned['Project No.'] || cleaned['Project No'] || cleaned['project_number'];
       if (projNum) {
-        cleaned['SiteDrawingUrl'] = `${R2_PUBLIC_URL}/Site ${projNum}_Drawing-only.pdf`;
+        cleaned['SiteDrawingUrl'] = `${BASE_PATH}/api/pdf/Site ${projNum}_Drawing-only.pdf`;
         newHeaders.add('SiteDrawingUrl');
-        cleaned['FullDesignPackUrl'] = `${R2_PUBLIC_URL}/Site ${projNum}_Full-Pack.pdf`;
+        cleaned['FullDesignPackUrl'] = `${BASE_PATH}/api/pdf/Site ${projNum}_Full-Pack.pdf`;
         newHeaders.add('FullDesignPackUrl');
       }
 
