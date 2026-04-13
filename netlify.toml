@@ -1,2 +1,47 @@
 [build]
-  base = "artifacts/sitenav"
+  publish = "artifacts/sitenav"
+  edge_functions = "artifacts/sitenav/netlify/edge-functions"
+  functions = "artifacts/sitenav/netlify/functions"
+  command = "echo 'No build step required'"
+
+[dev]
+  framework = "#static"
+  publish = "artifacts/sitenav"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api"
+  status = 200
+
+[[redirects]]
+  from = "/sitenav/api/*"
+  to = "/.netlify/functions/api"
+  status = 200
+
+[[redirects]]
+  from = "/admin/*"
+  to = "/.netlify/functions/api"
+  status = 200
+
+[[redirects]]
+  from = "/sitenav/admin/*"
+  to = "/.netlify/functions/api"
+  status = 200
+
+[[redirects]]
+  from = "/sitenav/admin"
+  to = "/.netlify/functions/api"
+  status = 200
+
+[[redirects]]
+  from = "/admin"
+  to = "/.netlify/functions/api"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

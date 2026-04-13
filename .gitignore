@@ -53,3 +53,6 @@ public/pdfs/
 
 # MCP Configuration and Keys
 mcp_endpoints_and_keys.md
+
+# Local Netlify folder
+.netlify
