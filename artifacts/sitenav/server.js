@@ -316,7 +316,7 @@ app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
     }
 
     let newHeaders = new Set();
-    const rowsToUpsert = [];
+    const rowsToUpsertMap = new Map();
     let totalRawCount = 0;
 
     for (const file of req.files) {
@@ -350,15 +350,18 @@ app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
         const key = cleaned['Site No.'] || cleaned['Site No'] || cleaned['site_no'] || cleaned['Site Number'] || cleaned['site_number'];
         if (!key) return;
 
-        const mergedData = existingSitesMap.has(key) ? { ...existingSitesMap.get(key), ...cleaned } : cleaned;
+        const baseData = rowsToUpsertMap.has(key) ? rowsToUpsertMap.get(key).data : (existingSitesMap.has(key) ? existingSitesMap.get(key) : {});
+        const mergedData = { ...baseData, ...cleaned };
 
-        rowsToUpsert.push({
+        rowsToUpsertMap.set(key, {
           site_no: key,
-          project_number: projNum || null,
+          project_number: projNum || (rowsToUpsertMap.has(key) ? rowsToUpsertMap.get(key).project_number : null),
           data: mergedData
         });
       });
     }
+
+    const rowsToUpsert = Array.from(rowsToUpsertMap.values());
 
     if (totalRawCount === 0) {
       return res.status(400).json({ success: false, error: 'The CSV files appear to be empty or could not be read.' });
