@@ -324,17 +324,19 @@ module.exports = function adminPage(basePath) {
           const data = await res.json();
 
           if (data.success) {
-            totalRaw += data.rawCount;
-            totalDB = data.count; // This represents total DB entities, latest will be final.
+            totalRaw += (data.rawCount || 0);
+            totalDB = (data.count || 0); // This represents total DB entities, latest will be final.
           } else {
             resultBox.className = 'result-box result-error';
             resultBox.innerHTML = `❌ Error on file ${i + 1} (${file.name}): ` + (data.error || 'Unknown error');
+            resultBox.style.display = 'block';
             hasError = true;
             break; 
           }
         } catch (err) {
           resultBox.className = 'result-box result-error';
           resultBox.innerHTML = `❌ Upload failed on file ${i + 1} (${file.name}): ` + err.message;
+          resultBox.style.display = 'block';
           hasError = true;
           break; 
         }
@@ -345,6 +347,7 @@ module.exports = function adminPage(basePath) {
       if (!hasError) {
         resultBox.className = 'result-box result-success';
         resultBox.innerHTML = '✅ Successfully processed <strong>' + totalRaw.toLocaleString() + '</strong> rows across ' + files.length + ' files! (Total sites in DB: ' + totalDB.toLocaleString() + ').';
+        resultBox.style.display = 'block';
         loadStats();
         loadConfig();
       }
