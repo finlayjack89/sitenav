@@ -296,20 +296,15 @@ app.post(`${BASE_PATH}/api/upload-pdfs`, (req, res, next) => {
 });
 
 app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
-  upload.single('csv')(req, res, err => {
+  upload.array('csvs')(req, res, err => {
     if (err) return res.status(400).json({ success: false, error: `Upload error: ${err.message}` });
     next();
   });
 }, async (req, res) => {
   if (!checkAuth(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
-  if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
+  if (!req.files || req.files.length === 0) return res.status(400).json({ success: false, error: 'No files uploaded' });
 
   try {
-    const csvContent = req.file.buffer.toString('utf8');
-    const records = parse(csvContent, {
-      columns: true, skip_empty_lines: true, trim: true, relax_column_count: true, bom: true
-    });
-
     const { data: configData } = await supabase.from('sites').select('data').eq('site_no', '__CONFIG__').maybeSingle();
     let searchConfig = (configData && configData.data) ? configData.data : {};
     const TECHNICAL_FIELDS = new Set(['Latitude', 'Longitude', 'URL', 'W3W', 'W3W (Camera)', 'W3W (Cabinet)', 'SiteDrawingUrl', 'FullDesignPackUrl']);
@@ -322,42 +317,51 @@ app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
 
     let newHeaders = new Set();
     const rowsToUpsert = [];
+    let totalRawCount = 0;
 
-    records.forEach(row => {
-      const cleaned = {};
-      for (const [key, value] of Object.entries(row)) {
-        const k = key ? key.trim() : key;
-        if (!k) continue;
-        if (value === null || value === undefined) continue;
-        const v = String(value).trim();
-        if (v === '') continue;
-        cleaned[k] = v;
-        newHeaders.add(k);
-      }
-      if (Object.keys(cleaned).length === 0) return;
-
-      const projNum = cleaned['Project Number'] || cleaned['Project No.'] || cleaned['Project No'] || cleaned['project_number'];
-      if (projNum) {
-        cleaned['SiteDrawingUrl'] = `${BASE_PATH}/api/pdf/Site ${projNum}_Drawing-only.pdf`;
-        newHeaders.add('SiteDrawingUrl');
-        cleaned['FullDesignPackUrl'] = `${BASE_PATH}/api/pdf/Site ${projNum}_Full-Pack.pdf`;
-        newHeaders.add('FullDesignPackUrl');
-      }
-
-      const key = cleaned['Site No.'] || cleaned['Site No'] || cleaned['site_no'] || cleaned['Site Number'] || cleaned['site_number'];
-      if (!key) return;
-
-      const mergedData = existingSitesMap.has(key) ? { ...existingSitesMap.get(key), ...cleaned } : cleaned;
-
-      rowsToUpsert.push({
-        site_no: key,
-        project_number: projNum || null,
-        data: mergedData
+    for (const file of req.files) {
+      const csvContent = file.buffer.toString('utf8');
+      const records = parse(csvContent, {
+        columns: true, skip_empty_lines: true, trim: true, relax_column_count: true, bom: true
       });
-    });
+      totalRawCount += records.length;
 
-    if (records.length === 0) {
-      return res.status(400).json({ success: false, error: 'The CSV file appears to be empty or could not be read.' });
+      records.forEach(row => {
+        const cleaned = {};
+        for (const [key, value] of Object.entries(row)) {
+          const k = key ? key.trim() : key;
+          if (!k) continue;
+          if (value === null || value === undefined) continue;
+          const v = String(value).trim();
+          if (v === '') continue;
+          cleaned[k] = v;
+          newHeaders.add(k);
+        }
+        if (Object.keys(cleaned).length === 0) return;
+
+        const projNum = cleaned['Project Number'] || cleaned['Project No.'] || cleaned['Project No'] || cleaned['project_number'];
+        if (projNum) {
+          cleaned['SiteDrawingUrl'] = `${BASE_PATH}/api/pdf/Site ${projNum}_Drawing-only.pdf`;
+          newHeaders.add('SiteDrawingUrl');
+          cleaned['FullDesignPackUrl'] = `${BASE_PATH}/api/pdf/Site ${projNum}_Full-Pack.pdf`;
+          newHeaders.add('FullDesignPackUrl');
+        }
+
+        const key = cleaned['Site No.'] || cleaned['Site No'] || cleaned['site_no'] || cleaned['Site Number'] || cleaned['site_number'];
+        if (!key) return;
+
+        const mergedData = existingSitesMap.has(key) ? { ...existingSitesMap.get(key), ...cleaned } : cleaned;
+
+        rowsToUpsert.push({
+          site_no: key,
+          project_number: projNum || null,
+          data: mergedData
+        });
+      });
+    }
+
+    if (totalRawCount === 0) {
+      return res.status(400).json({ success: false, error: 'The CSV files appear to be empty or could not be read.' });
     }
 
     if (rowsToUpsert.length === 0) {
@@ -385,7 +389,7 @@ app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
       await supabase.from('sites').upsert({ site_no: '__CONFIG__', project_number: null, data: searchConfig });
     }
 
-    res.json({ success: true, count: rowsToUpsert.length, rawCount: records.length });
+    res.json({ success: true, count: rowsToUpsert.length, rawCount: totalRawCount });
   } catch (err) {
     console.error('CSV parse/upload error:', err);
     res.status(500).json({ success: false, error: String(err.message) });

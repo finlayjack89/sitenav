@@ -72,10 +72,10 @@
       <div class="file-input-wrap" id="csv-drop-zone">
         <label class="file-label" for="csv-file">
           <div class="file-icon">📊</div>
-          <div class="file-text">Tap to select a CSV file, or drag & drop here</div>
-          <div class="file-name" id="csv-file-name">No file selected</div>
+          <div class="file-text">Tap to select multiple CSV files, or drag & drop here</div>
+          <div class="file-name" id="csv-file-name">No files selected</div>
         </label>
-        <input type="file" id="csv-file" accept=".csv,text/csv" onchange="handleFileSelect(this, 'csv-file-name', 'upload-csv-btn')">
+        <input type="file" id="csv-file" accept=".csv,text/csv" multiple onchange="handleFileSelect(this, 'csv-file-name', 'upload-csv-btn')">
       </div>
 
       <button class="btn-primary" id="upload-csv-btn" disabled onclick="uploadCSV()">Upload & Import Dataset</button>
@@ -296,8 +296,8 @@
 
     async function uploadCSV() {
       const fileInput = document.getElementById('csv-file');
-      const file = fileInput.files[0];
-      if (!file) return;
+      const files = fileInput.files;
+      if (!files || files.length === 0) return;
 
       const btn = document.getElementById('upload-csv-btn');
       const progress = document.getElementById('csv-progress');
@@ -310,7 +310,9 @@
       resultBox.style.display = 'none';
 
       const formData = new FormData();
-      formData.append('csv', file);
+      for(let i = 0; i < files.length; i++) {
+        formData.append('csvs', files[i]);
+      }
 
       try {
         progress.value = 60;
@@ -337,6 +339,8 @@
         btn.disabled = false;
         btn.textContent = 'Upload & Import Dataset';
         setTimeout(() => { progress.style.display = 'none'; progress.value = 0; }, 2000);
+        fileInput.value = '';
+        handleFileSelect(fileInput, 'csv-file-name', 'upload-csv-btn');
       }
     }
 
