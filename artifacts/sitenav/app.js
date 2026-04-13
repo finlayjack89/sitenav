@@ -379,20 +379,8 @@
         'aria-label': 'Copy W3W address',
         onclick: function () { copyText('///' + w3wStr, this); }
       }, ['Copy']);
-      const w3wLink = el('a', {
-        className: 'w3w-link-btn',
-        href: `https://what3words.com/${w3wStr}`,
-        target: '_blank',
-        rel: 'noopener',
-        'aria-label': 'Open in What3Words'
-      }, ['Open W3W']);
-      const extIcon = svgIcon(SVG_PATHS.externalLink);
-      extIcon.style.width = '12px';
-      extIcon.style.height = '12px';
-      w3wLink.appendChild(extIcon);
       w3wRow.appendChild(w3wVal);
       w3wRow.appendChild(copyBtn);
-      w3wRow.appendChild(w3wLink);
       inner.appendChild(w3wRow);
     }
 
@@ -435,6 +423,23 @@
     } else if (lat || lon) {
       const coordDisp = el('div', { className: 'coord-display' }, [lat ? lat : lon]);
       inner.appendChild(coordDisp);
+    }
+
+    if (w3wStr) {
+      const w3wLink = el('a', {
+        className: 'nav-btn',
+        href: `https://what3words.com/${w3wStr}`,
+        target: '_blank',
+        rel: 'noopener',
+        style: 'background: #e8170a; margin-top: 12px;',
+        'aria-label': 'Navigate using What3Words'
+      });
+      const extIcon = svgIcon(SVG_PATHS.externalLink);
+      extIcon.style.width = '18px';
+      extIcon.style.height = '18px';
+      w3wLink.appendChild(extIcon);
+      w3wLink.appendChild(document.createTextNode('Navigate w/ W3W'));
+      inner.appendChild(w3wLink);
     }
 
     wrap.appendChild(inner);

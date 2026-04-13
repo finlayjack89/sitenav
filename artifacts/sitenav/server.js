@@ -41,7 +41,7 @@ const uploadPdf = multer({ storage: multer.memoryStorage(), limits: { fileSize: 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(BASE_PATH, express.static(path.join(__dirname, 'public'), {
+app.use(BASE_PATH, express.static(__dirname, {
   index: 'index.html',
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('sw.js')) {
