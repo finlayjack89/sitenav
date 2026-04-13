@@ -312,7 +312,7 @@ app.post(`${BASE_PATH}/api/upload-csv`, (req, res, next) => {
 
     const { data: configData } = await supabase.from('sites').select('data').eq('site_no', '__CONFIG__').maybeSingle();
     let searchConfig = (configData && configData.data) ? configData.data : {};
-    const TECHNICAL_FIELDS = new Set(['Latitude', 'Longitude', 'URL', 'W3W', 'Coordinates (Camera', 'Coordinates (Camera)', 'Coordinates (Cabinet)', 'W3W (Camera)', 'W3W (Cabinet)', 'SiteDrawingUrl', 'FullDesignPackUrl']);
+    const TECHNICAL_FIELDS = new Set(['Latitude', 'Longitude', 'URL', 'W3W', 'W3W (Camera)', 'W3W (Cabinet)', 'SiteDrawingUrl', 'FullDesignPackUrl']);
 
     const existingSitesData = await fetchAllSites('site_no, data');
     const existingSitesMap = new Map();

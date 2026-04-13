@@ -11,9 +11,8 @@
   const RECENT_LIMIT = 5;
 
   const MAP_COORD_KEYS = new Set([
-    'W3W', 'w3w', 'Coordinates', 'coordinates',
-    'W3W (Camera)', 'Coordinates (Camera', 'Coordinates (Camera)',
-    'W3W (Cabinet)', 'Coordinates (Cabinet)'
+    'W3W', 'w3w', 'Latitude', 'Longitude', 'latitude', 'longitude',
+    'W3W (Camera)', 'W3W (Cabinet)'
   ]);
 
   const DUAL_TYPES = new Set(['CC Enforcement', 'LEZ']);
@@ -110,18 +109,8 @@
     } catch (_) {}
   }
 
-  function parseCoords(str) {
-    if (!str) return null;
-    const parts = str.split(',');
-    if (parts.length < 2) return null;
-    const lat = parseFloat(parts[0].trim());
-    const lon = parseFloat(parts[1].trim());
-    if (isNaN(lat) || isNaN(lon)) return null;
-    return { lat, lon };
-  }
-
-  function buildMapUrl(lat, lon, zoom = 17) {
-    return `${BASE}/api/map?lat=${lat}&lon=${lon}&zoom=${zoom}`;
+  function buildMapUrl(lat, lon, zoom = 16) {
+    return `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lon}&zoom=${zoom}&size=600x300&markers=color:red%7C${lat},${lon}&key=${mapsApiKey}`;
   }
 
   function buildNavUrl(lat, lon) {
@@ -360,8 +349,7 @@
     share: ['M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8', 'M16 6l-4-4-4 4', 'M12 2v13']
   };
 
-  function buildMapBlock(label, coordStr, w3wStr, iconType) {
-    const coords = parseCoords(coordStr);
+  function buildMapBlock(label, lat, lon, w3wStr, iconType) {
     const wrap = el('div', { className: 'map-section' });
     const inner = el('div', { className: 'map-section-inner' });
     const heading = el('h3', { className: 'map-heading' });
@@ -408,8 +396,8 @@
       inner.appendChild(w3wRow);
     }
 
-    if (coords) {
-      const mapUrl = buildMapUrl(coords.lat, coords.lon);
+    if (lat && lon) {
+      const mapUrl = buildMapUrl(lat, lon);
       if (mapUrl) {
         const img = el('img', {
           className: 'static-map',
@@ -427,13 +415,13 @@
         };
         inner.appendChild(img);
       } else {
-        const coordDisp = el('div', { className: 'coord-display' }, [coordStr]);
+        const coordDisp = el('div', { className: 'coord-display' }, [`${lat}, ${lon}`]);
         inner.appendChild(coordDisp);
       }
 
       const navBtn = el('a', {
         className: 'nav-btn',
-        href: buildNavUrl(coords.lat, coords.lon),
+        href: buildNavUrl(lat, lon),
         target: '_blank',
         rel: 'noopener',
         'aria-label': 'Navigate to ' + label
@@ -444,8 +432,8 @@
       navBtn.appendChild(navIcon);
       navBtn.appendChild(document.createTextNode('Navigate'));
       inner.appendChild(navBtn);
-    } else if (coordStr) {
-      const coordDisp = el('div', { className: 'coord-display' }, [coordStr]);
+    } else if (lat || lon) {
+      const coordDisp = el('div', { className: 'coord-display' }, [lat ? lat : lon]);
       inner.appendChild(coordDisp);
     }
 
@@ -462,9 +450,10 @@
     const siteType = site['Type'] || '';
     const isDual = DUAL_TYPES.has(siteType);
 
-    const camCoord = site['Coordinates (Camera'] || site['Coordinates (Camera)'] || site['Coordinates'] || site['coordinates'] || '';
-    const camW3w = site['W3W (Camera)'] || site['W3W'] || site['w3w'] || '';
-    const cabCoord = site['Coordinates (Cabinet)'] || '';
+    const lat = site['Latitude'] || site['latitude'] || site['Lat'] || '';
+    const lon = site['Longitude'] || site['longitude'] || site['Lon'] || '';
+
+    const w3w = site['W3W'] || site['w3w'] || site['W3W (Camera)'] || '';
     const cabW3w = site['W3W (Cabinet)'] || '';
 
     const topBar = el('div', { className: 'card-topbar' });
@@ -566,15 +555,15 @@
     const mapArea = el('div', { className: 'map-area' });
 
     if (isDual) {
-      if (camCoord || camW3w) {
-        mapArea.appendChild(buildMapBlock('Camera', camCoord, camW3w, 'camera'));
+      if (lat || lon || w3w) {
+        mapArea.appendChild(buildMapBlock('Camera', lat, lon, w3w, 'camera'));
       }
-      if (cabCoord || cabW3w) {
-        mapArea.appendChild(buildMapBlock('Cabinet', cabCoord, cabW3w, 'cabinet'));
+      if (cabW3w) {
+        mapArea.appendChild(buildMapBlock('Cabinet', null, null, cabW3w, 'cabinet'));
       }
     } else {
-      if (camCoord || camW3w) {
-        mapArea.appendChild(buildMapBlock('Location', camCoord, camW3w, 'pin'));
+      if (lat || lon || w3w) {
+        mapArea.appendChild(buildMapBlock('Location', lat, lon, w3w, 'pin'));
       }
     }
 
