@@ -310,7 +310,7 @@ module.exports = function adminPage(basePath) {
       let hasError = false;
 
       for (let i = 0; i < files.length; i++) {
-        btn.textContent = `Uploading file ${i + 1} of ${files.length}…`;
+        btn.textContent = 'Uploading file ' + (i + 1) + ' of ' + files.length + '…';
         const file = files[i];
 
         const formData = new FormData();
@@ -328,14 +328,14 @@ module.exports = function adminPage(basePath) {
             totalDB = (data.count || 0); // This represents total DB entities, latest will be final.
           } else {
             resultBox.className = 'result-box result-error';
-            resultBox.innerHTML = `❌ Error on file ${i + 1} (${file.name}): ` + (data.error || 'Unknown error');
+            resultBox.innerHTML = '❌ Error on file ' + (i + 1) + ' (' + file.name + '): ' + (data.error || 'Unknown error');
             resultBox.style.display = 'block';
             hasError = true;
             break; 
           }
         } catch (err) {
           resultBox.className = 'result-box result-error';
-          resultBox.innerHTML = `❌ Upload failed on file ${i + 1} (${file.name}): ` + err.message;
+          resultBox.innerHTML = '❌ Upload failed on file ' + (i + 1) + ' (' + file.name + '): ' + err.message;
           resultBox.style.display = 'block';
           hasError = true;
           break; 
