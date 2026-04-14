@@ -4,6 +4,9 @@
   functions = "artifacts/sitenav/netlify/functions"
   command = "echo 'No build step required'"
 
+[build.environment]
+  NETLIFY_USE_PNPM = "true"
+
 [dev]
   framework = "#static"
   publish = "artifacts/sitenav"
