@@ -1,11 +1,11 @@
 [build]
-  publish = "artifacts/sitenav"
-  edge_functions = "artifacts/sitenav/netlify/edge-functions"
-  functions = "artifacts/sitenav/netlify/functions"
+  base = "artifacts/sitenav"
+  publish = "."
+  edge_functions = "netlify/edge-functions"
+  functions = "netlify/functions"
   command = "echo 'No build step required'"
 
 [build.environment]
-  NETLIFY_USE_PNPM = "true"
   NODE_VERSION = "20.18.0"
 
 [dev]
