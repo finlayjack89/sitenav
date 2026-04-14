@@ -63,13 +63,21 @@ export default async (req, context) => {
         button:hover { background-color: #2563eb; }
         .error { color: #ef4444; font-size: 0.9em; margin-top: 10px; }
         h2 { margin-top: 0; font-weight: 600; }
-        p { color: #94a3b8; font-size: 0.9em; margin-bottom: 20px; }
+        p { color: #94a3b8; font-size: 0.9em; margin-bottom: 15px; }
+        .notice { background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.5); padding: 12px; border-radius: 8px; color: #bfdbfe; font-size: 0.85rem; margin-bottom: 20px; line-height: 1.4; text-align: left; }
+        .notice strong { color: #60a5fa; display: block; margin-bottom: 4px; font-size: 0.95rem; }
       </style>
     </head>
     <body>
       <div class="form-container">
         <h2>SiteNav Access</h2>
         <p>Please enter the shared password to continue.</p>
+        
+        <div class="notice">
+          <strong>Need the password?</strong>
+          You can find it pinned in the site team's WhatsApp group.
+        </div>
+
         <form method="POST" action="">
           <input type="hidden" name="site_login_attempt" value="1">
           <input type="password" name="password" placeholder="Enter Site Password" required autofocus>
