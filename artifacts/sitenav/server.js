@@ -14,6 +14,7 @@ const PORT = process.env.PORT || 22849;
 const BASE_PATH = (process.env.BASE_PATH || '/sitenav').replace(/\/$/, '');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
+const SITENAV_API_KEY = process.env.SITENAV_API_KEY || '';
 
 // Supabase Setup
 const supabaseUrl = process.env.SUPABASE_URL || 'https://hwxrlizvyapisruelisj.supabase.co';
@@ -159,6 +160,120 @@ app.get(`${BASE_PATH}/api/sites`, async (req, res) => {
     res.json([]);
   }
 });
+
+// --- UK Address Parser ---
+const UK_POSTCODE_RE = /[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}/i;
+
+function parseUKAddress(raw) {
+  const fallback = { raw, line1: raw, line2: null, city: '', postcode: null, country: 'United Kingdom' };
+  try {
+    if (!raw || typeof raw !== 'string') return fallback;
+    let working = raw.trim();
+
+    // Extract postcode
+    let postcode = null;
+    const match = working.match(UK_POSTCODE_RE);
+    if (match) {
+      postcode = match[0].toUpperCase();
+      working = working.replace(UK_POSTCODE_RE, '').trim();
+    }
+
+    // Split on commas
+    const parts = working.split(',').map(p => p.trim()).filter(p => p.length > 0);
+    if (parts.length === 0) return { ...fallback, postcode };
+    if (parts.length === 1) return { raw, line1: parts[0], line2: null, city: '', postcode, country: 'United Kingdom' };
+    if (parts.length === 2) return { raw, line1: parts[0], line2: null, city: parts[1], postcode, country: 'United Kingdom' };
+
+    // 3+ parts: first = line1, last = city, middle = line2
+    return {
+      raw,
+      line1: parts[0],
+      line2: parts.slice(1, -1).join(', ') || null,
+      city: parts[parts.length - 1],
+      postcode,
+      country: 'United Kingdom'
+    };
+  } catch { return fallback; }
+}
+
+// --- Site Lookup API (for Chrome Extension) ---
+const EXTENSION_ORIGIN = 'https://yunextraffic.appsint.com';
+
+function setSiteLookupCors(res) {
+  res.setHeader('Access-Control-Allow-Origin', EXTENSION_ORIGIN);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'x-api-key, content-type');
+  res.setHeader('Access-Control-Max-Age', '86400');
+}
+
+// Preflight
+app.options(`${BASE_PATH}/api/sites/lookup`, (req, res) => {
+  setSiteLookupCors(res);
+  res.status(204).end();
+});
+
+// Also handle /api/sites/lookup without BASE_PATH for Netlify redirects
+app.options('/api/sites/lookup', (req, res) => {
+  setSiteLookupCors(res);
+  res.status(204).end();
+});
+
+function handleSiteLookup(req, res) {
+  setSiteLookupCors(res);
+
+  // API key check
+  if (!SITENAV_API_KEY) return res.status(500).json({ error: 'API key not configured on server' });
+  const provided = req.headers['x-api-key'];
+  if (!provided || provided !== SITENAV_API_KEY) return res.status(401).json({ error: 'Unauthorized' });
+
+  const siteNumber = req.query.site_number;
+  if (!siteNumber) return res.status(400).json({ error: 'site_number query parameter is required' });
+
+  supabase
+    .from('sites')
+    .select('site_no, data')
+    .eq('site_no', siteNumber)
+    .neq('site_no', '__CONFIG__')
+    .maybeSingle()
+    .then(({ data: row, error }) => {
+      if (error) {
+        console.error('Site lookup Supabase error:', error);
+        return res.status(500).json({ error: 'Database query failed' });
+      }
+      if (!row) return res.status(404).json({ error: 'Site not found' });
+
+      const siteData = row.data || {};
+      const addressRaw = siteData['Address'] || '';
+      const parsed = parseUKAddress(addressRaw);
+
+      const latStr = siteData['Latitude'];
+      const lngStr = siteData['Longitude'];
+      const lat = latStr ? parseFloat(latStr) : null;
+      const lng = lngStr ? parseFloat(lngStr) : null;
+
+      res.json({
+        site_number: siteNumber,
+        name: siteData['Name'] || siteData['Site Name'] || null,
+        address_raw: addressRaw,
+        address_parsed: {
+          line1: parsed.line1,
+          line2: parsed.line2,
+          city: parsed.city,
+          postcode: parsed.postcode,
+          country: parsed.country,
+        },
+        lat: lat !== null && !isNaN(lat) ? lat : null,
+        lng: lng !== null && !isNaN(lng) ? lng : null,
+      });
+    })
+    .catch(err => {
+      console.error('Site lookup error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    });
+}
+
+app.get(`${BASE_PATH}/api/sites/lookup`, handleSiteLookup);
+app.get('/api/sites/lookup', handleSiteLookup);
 
 app.get(`${BASE_PATH}/api/config`, async (req, res) => {
   try {
